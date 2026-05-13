@@ -7,14 +7,13 @@ const auth = require('../middleware/auth');
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage() });
 
-// POST /api/listings/upload — Subir Excel de listings
+// POST /api/listings/upload
 router.post('/upload', auth, upload.single('file'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ message: 'No se envió ningún archivo.' });
     }
 
-    // Leer el Excel
     const workbook = xlsx.read(req.file.buffer, { type: 'buffer' });
     const sheetName = workbook.SheetNames[0];
     const worksheet = workbook.Sheets[sheetName];
@@ -24,80 +23,81 @@ router.post('/upload', auth, upload.single('file'), async (req, res) => {
       return res.status(400).json({ message: 'El archivo está vacío.' });
     }
 
-    // Mapear columnas del Excel al modelo
+    const cleanNumber = (val) => {
+      if (!val) return 0;
+      return parseFloat(String(val).replace(/[$,>]/g, '')) || 0;
+    };
+
     const listings = rawData.map((row) => ({
       userId: req.user.id,
-      asin: row['ASIN'] || row['asin'] || '',
+      asin: row['Identifier'] || row['ASIN'] || row['asin'] || '',
       title: row['Title'] || row['Titulo'] || row['title'] || '',
       category: row['Category'] || row['Categoria'] || row['category'] || 'Sin categoría',
-      price: parseFloat(row['Price'] || row['Precio'] || 0),
-      salesPerDay: parseInt(row['Sales/Day'] || row['Ventas/Dia'] || row['SalesPerDay'] || 0),
-      conversionRate: parseFloat(row['Conversion Rate'] || row['ConversionRate'] || row['CR'] || 0),
-      impressions: parseInt(row['Impressions'] || row['Impresiones'] || 0),
-      clicks: parseInt(row['Clicks'] || row['Clics'] || 0),
-      bsr: parseInt(row['BSR'] || row['Rank'] || 0),
-      ctr: parseFloat(row['CTR'] || 0),
+      price: cleanNumber(row['Price'] || row['Precio'] || 0),
+      salesPerDay: cleanNumber(row['Units Ordered'] || row['Sales/Day'] || row['Ventas/Dia'] || 0),
+      conversionRate: cleanNumber(row['Conversion Rate'] || row['ConversionRate'] || row['CR'] || 0),
+      impressions: cleanNumber(row['Impressions'] || row['Impresiones'] || 0),
+      clicks: cleanNumber(row['Clicks'] || row['Clics'] || 0),
+      bsr: cleanNumber(row['BSR'] || row['Rank'] || 0),
+      ctr: cleanNumber(row['CTR'] || 0),
+      orderedProductSales: cleanNumber(row['Ordered Product Sales'] || 0),
+      totalOrderItems: cleanNumber(row['Total Order Items'] || 0),
     }));
 
-    // Insertar en la base de datos
     const result = await Listing.insertMany(listings);
 
-    res.status(201).json({
+    return res.status(201).json({
       message: `${result.length} listados cargados exitosamente.`,
       count: result.length,
     });
   } catch (error) {
-    res.status(500).json({ message: 'Error al procesar el archivo', error: error.message });
+    return res.status(500).json({ message: 'Error al procesar el archivo', error: error.message });
   }
 });
 
-// GET /api/listings — Obtener listings con filtros
+// GET /api/listings
 router.get('/', auth, async (req, res) => {
   try {
     const { category, minSales, minConversion, sortBy, order } = req.query;
 
     let query = { userId: req.user.id };
 
-    // Filtros opcionales
     if (category) query.category = category;
-    if (minSales) query.salesPerDay = { $gte: parseInt(minSales) };
+    if (minSales) query.salesPerDay = { $gte: parseFloat(minSales) };
     if (minConversion) query.conversionRate = { $gte: parseFloat(minConversion) };
 
-    // Ordenamiento
     let sortOption = {};
     if (sortBy) {
       sortOption[sortBy] = order === 'asc' ? 1 : -1;
     } else {
-      sortOption.uploadedAt = -1; // Más recientes primero
+      sortOption.salesPerDay = -1;
     }
 
     const listings = await Listing.find(query).sort(sortOption);
-    res.json(listings);
+    return res.json(listings);
   } catch (error) {
-    res.status(500).json({ message: 'Error del servidor', error: error.message });
+    return res.status(500).json({ message: 'Error del servidor', error: error.message });
   }
 });
 
-// GET /api/listings/categories — Obtener lista de categorías únicas
+// GET /api/listings/categories
 router.get('/categories', auth, async (req, res) => {
   try {
     const categories = await Listing.distinct('category', { userId: req.user.id });
-    res.json(categories);
+    return res.json(categories);
   } catch (error) {
-    res.status(500).json({ message: 'Error del servidor' });
+    return res.status(500).json({ message: 'Error del servidor' });
   }
 });
 
-// GET /api/listings/stats — Métricas agregadas para el dashboard
+// GET /api/listings/stats
 router.get('/stats', auth, async (req, res) => {
   try {
-    const { category } = req.query;
-    let match = { userId: req.user.id };
-    if (category) match.category = category;
-
-    // Necesitamos convertir userId a ObjectId para aggregate
     const mongoose = require('mongoose');
-    match.userId = new mongoose.Types.ObjectId(req.user.id);
+    const { category } = req.query;
+
+    let match = { userId: new mongoose.Types.ObjectId(req.user.id) };
+    if (category) match.category = category;
 
     const stats = await Listing.aggregate([
       { $match: match },
@@ -111,12 +111,13 @@ router.get('/stats', auth, async (req, res) => {
           avgBSR: { $avg: '$bsr' },
           totalImpressions: { $sum: '$impressions' },
           totalClicks: { $sum: '$clicks' },
+          totalOrderedProductSales: { $sum: '$orderedProductSales' },
+          totalUnitsOrdered: { $sum: '$salesPerDay' },
         },
       },
-      { $sort: { avgSalesPerDay: -1 } },
+      { $sort: { totalUnitsOrdered: -1 } },
     ]);
 
-    // Totales generales
     const totals = await Listing.aggregate([
       { $match: match },
       {
@@ -128,26 +129,28 @@ router.get('/stats', auth, async (req, res) => {
           avgConversionRate: { $avg: '$conversionRate' },
           totalImpressions: { $sum: '$impressions' },
           totalClicks: { $sum: '$clicks' },
+          totalOrderedProductSales: { $sum: '$orderedProductSales' },
+          totalUnitsOrdered: { $sum: '$salesPerDay' },
         },
       },
     ]);
 
-    res.json({
+    return res.json({
       byCategory: stats,
       totals: totals[0] || {},
     });
   } catch (error) {
-    res.status(500).json({ message: 'Error del servidor', error: error.message });
+    return res.status(500).json({ message: 'Error del servidor', error: error.message });
   }
 });
 
-// DELETE /api/listings — Borrar todos los listings del usuario
+// DELETE /api/listings
 router.delete('/', auth, async (req, res) => {
   try {
     const result = await Listing.deleteMany({ userId: req.user.id });
-    res.json({ message: `${result.deletedCount} listados eliminados.` });
+    return res.json({ message: `${result.deletedCount} listados eliminados.` });
   } catch (error) {
-    res.status(500).json({ message: 'Error del servidor' });
+    return res.status(500).json({ message: 'Error del servidor' });
   }
 });
 

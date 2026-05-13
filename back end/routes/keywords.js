@@ -7,7 +7,7 @@ const auth = require('../middleware/auth');
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage() });
 
-// POST /api/keywords/upload — Subir Excel de keywords
+// POST /api/keywords/upload
 router.post('/upload', auth, upload.single('file'), async (req, res) => {
   try {
     if (!req.file) {
@@ -23,69 +23,69 @@ router.post('/upload', auth, upload.single('file'), async (req, res) => {
       return res.status(400).json({ message: 'El archivo está vacío.' });
     }
 
+    const cleanNumber = (val) => {
+      if (!val) return 0;
+      return parseFloat(String(val).replace(/[$,>]/g, '')) || 0;
+    };
+
     const keywords = rawData.map((row) => ({
       userId: req.user.id,
-      keyword: row['Keyword'] || row['keyword'] || row['Keyword Phrase'] || '',
-      searchVolume: parseInt(row['Search Volume'] || row['Volume'] || row['Volumen'] || 0),
-      competitorCount: parseInt(row['Competing Products'] || row['Competitors'] || row['Competidores'] || 0),
-      cpc: parseFloat(row['CPC'] || row['Suggested PPC Bid'] || 0),
-      relevance: parseInt(row['Relevance'] || row['Relevancia'] || row['Cerebro IQ Score'] || 0),
+      keyword: row['Keyword Phrase'] || row['Keyword'] || row['keyword'] || '',
+      searchVolume: cleanNumber(row['Search Volume'] || row['Volume'] || row['Volumen'] || 0),
+      competitorCount: cleanNumber(row['Competing Products'] || row['Competitors'] || row['Competidores'] || 0),
+      cpc: cleanNumber(row['CPC'] || row['Suggested PPC Bid'] || 0),
+      relevance: cleanNumber(row['Cerebro IQ Score'] || row['Relevance'] || row['Relevancia'] || 0),
       trend: row['Trend'] || row['Search Volume Trend'] || 'stable',
+      keywordSales: cleanNumber(row['Keyword Sales'] || 0),
+      sponsoredAsins: cleanNumber(row['Sponsored ASINs'] || 0),
+      organic: cleanNumber(row['Organic'] || 0),
+      category: row['Category'] || row['Categoria'] || '',
     }));
 
     const result = await Keyword.insertMany(keywords);
 
-    res.status(201).json({
+    return res.status(201).json({
       message: `${result.length} keywords cargadas exitosamente.`,
       count: result.length,
     });
   } catch (error) {
-    res.status(500).json({ message: 'Error al procesar el archivo', error: error.message });
+    return res.status(500).json({ message: 'Error al procesar el archivo', error: error.message });
   }
 });
 
-// GET /api/keywords — Obtener keywords con filtros
+// GET /api/keywords
 router.get('/', auth, async (req, res) => {
   try {
     const { minVolume, maxCompetitors, sortBy, order, limit } = req.query;
 
     let query = { userId: req.user.id };
-
-    if (minVolume) query.searchVolume = { $gte: parseInt(minVolume) };
-    if (maxCompetitors) query.competitorCount = { $lte: parseInt(maxCompetitors) };
+    if (minVolume) query.searchVolume = { $gte: parseFloat(minVolume) };
+    if (maxCompetitors) query.competitorCount = { $lte: parseFloat(maxCompetitors) };
 
     let sortOption = {};
-    if (sortBy) {
-      sortOption[sortBy] = order === 'asc' ? 1 : -1;
-    } else {
-      sortOption.searchVolume = -1;
-    }
+    sortOption[sortBy || 'searchVolume'] = order === 'asc' ? 1 : -1;
 
-    const queryLimit = parseInt(limit) || 500;
-    const keywords = await Keyword.find(query).sort(sortOption).limit(queryLimit);
-
-    res.json(keywords);
+    const keywords = await Keyword.find(query).sort(sortOption).limit(parseInt(limit) || 500);
+    return res.json(keywords);
   } catch (error) {
-    res.status(500).json({ message: 'Error del servidor', error: error.message });
+    return res.status(500).json({ message: 'Error del servidor', error: error.message });
   }
 });
 
-// GET /api/keywords/top — Top keywords por volumen
+// GET /api/keywords/top
 router.get('/top', auth, async (req, res) => {
   try {
     const topCount = parseInt(req.query.count) || 20;
-
     const topKeywords = await Keyword.find({ userId: req.user.id })
       .sort({ searchVolume: -1 })
       .limit(topCount);
-
-    res.json(topKeywords);
+    return res.json(topKeywords);
   } catch (error) {
-    res.status(500).json({ message: 'Error del servidor' });
+    return res.status(500).json({ message: 'Error del servidor' });
   }
 });
 
-// GET /api/keywords/opportunities — Keywords de alta oportunidad (alto volumen + baja competencia)
+// GET /api/keywords/opportunities
 router.get('/opportunities', auth, async (req, res) => {
   try {
     const mongoose = require('mongoose');
@@ -107,19 +107,19 @@ router.get('/opportunities', auth, async (req, res) => {
       { $limit: 20 },
     ]);
 
-    res.json(opportunities);
+    return res.json(opportunities);
   } catch (error) {
-    res.status(500).json({ message: 'Error del servidor', error: error.message });
+    return res.status(500).json({ message: 'Error del servidor', error: error.message });
   }
 });
 
-// DELETE /api/keywords — Borrar todas las keywords del usuario
+// DELETE /api/keywords
 router.delete('/', auth, async (req, res) => {
   try {
     const result = await Keyword.deleteMany({ userId: req.user.id });
-    res.json({ message: `${result.deletedCount} keywords eliminadas.` });
+    return res.json({ message: `${result.deletedCount} keywords eliminadas.` });
   } catch (error) {
-    res.status(500).json({ message: 'Error del servidor' });
+    return res.status(500).json({ message: 'Error del servidor' });
   }
 });
 

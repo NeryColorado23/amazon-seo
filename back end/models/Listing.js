@@ -6,51 +6,19 @@ const listingSchema = new mongoose.Schema({
     ref: 'User',
     required: true,
   },
-  asin: {
-    type: String,
-    required: true,
-    trim: true,
-  },
-  title: {
-    type: String,
-    default: '',
-  },
-  category: {
-    type: String,
-    default: 'Sin categoría',
-  },
-  price: {
-    type: Number,
-    default: 0,
-  },
-  salesPerDay: {
-    type: Number,
-    default: 0,
-  },
-  conversionRate: {
-    type: Number,
-    default: 0,
-  },
-  impressions: {
-    type: Number,
-    default: 0,
-  },
-  clicks: {
-    type: Number,
-    default: 0,
-  },
-  bsr: {
-    type: Number,
-    default: 0,
-  },
-  ctr: {
-    type: Number,
-    default: 0,
-  },
-  uploadedAt: {
-    type: Date,
-    default: Date.now,
-  },
+  asin: { type: String, default: '' },
+  title: { type: String, default: '' },
+  category: { type: String, default: 'Sin categoría' },
+  price: { type: Number, default: 0 },
+  salesPerDay: { type: Number, default: 0 },
+  conversionRate: { type: Number, default: 0 },
+  impressions: { type: Number, default: 0 },
+  clicks: { type: Number, default: 0 },
+  bsr: { type: Number, default: 0 },
+  ctr: { type: Number, default: 0 },
+  orderedProductSales: { type: Number, default: 0 },
+  totalOrderItems: { type: Number, default: 0 },
+  uploadedAt: { type: Date, default: Date.now },
 });
 
 module.exports = mongoose.model('Listing', listingSchema);

@@ -1,4 +1,4 @@
-<nav class="navbar" *ngIf="user">
+<nav class="navbar">
   <div class="nav-brand">
     <span class="logo">&#9670;</span>
     <span class="brand-text">Amazon SEO Optimizer</span>
@@ -9,7 +9,7 @@
     <a routerLink="/keywords" routerLinkActive="active">Keywords</a>
   </div>
 
-  <div class="nav-user">
+  <div class="nav-user" *ngIf="user">
     <span class="user-name">{{ user.name }}</span>
     <button class="btn-logout" (click)="logout()">Cerrar sesión</button>
   </div>

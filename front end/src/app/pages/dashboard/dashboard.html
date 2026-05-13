@@ -1,0 +1,159 @@
+<div class="dashboard-container">
+  <h1 class="page-title">Dashboard de Listados</h1>
+
+  <!-- ── MÉTRICAS ── -->
+  <div class="metrics-grid" *ngIf="stats">
+    <div class="metric-card">
+      <div class="metric-value">{{ stats.totalListings || 0 }}</div>
+      <div class="metric-label">Total listados</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-value">{{ avgSales }}</div>
+      <div class="metric-label">Promedio ventas/día</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-value">{{ avgConversion }}%</div>
+      <div class="metric-label">Conversión promedio</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-value">{{ totalImpressions }}</div>
+      <div class="metric-label">Total impresiones</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-value">{{ avgPrice }}</div>
+      <div class="metric-label">Precio promedio</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-value">{{ categories.length }}</div>
+      <div class="metric-label">Categorías</div>
+    </div>
+  </div>
+
+  <!-- ── STATS POR CATEGORÍA ── -->
+  <div class="card" *ngIf="categoryStats.length > 0">
+    <h2 class="section-title">Rendimiento por categoría</h2>
+    <div class="table-scroll">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Categoría</th>
+            <th>Listados</th>
+            <th>Ventas/día prom.</th>
+            <th>Conversión prom.</th>
+            <th>BSR prom.</th>
+            <th>Impresiones</th>
+            <th>Clics</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let cat of categoryStats">
+            <td><strong>{{ cat._id }}</strong></td>
+            <td>{{ cat.totalListings }}</td>
+            <td>{{ cat.avgSalesPerDay | number:'1.1-1' }}</td>
+            <td>{{ cat.avgConversionRate | number:'1.2-2' }}%</td>
+            <td>{{ cat.avgBSR | number:'1.0-0' }}</td>
+            <td>{{ cat.totalImpressions | number }}</td>
+            <td>{{ cat.totalClicks | number }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ── UPLOAD ── -->
+  <div class="card">
+    <h2 class="section-title">Cargar datos de listados</h2>
+    <p class="section-desc">Sube un Excel con columnas: ASIN, Title, Category, Price, Sales/Day, Conversion Rate, Impressions, Clicks, BSR</p>
+    <app-file-upload
+      label="Subir Excel de listados"
+      [loading]="uploading"
+      (fileSelected)="onFileUploaded($event)"
+    ></app-file-upload>
+    <p class="success-msg" *ngIf="uploadMessage">{{ uploadMessage }}</p>
+    <p class="error-msg" *ngIf="uploadError">{{ uploadError }}</p>
+  </div>
+
+  <!-- ── FILTROS ── -->
+  <div class="filters-bar" *ngIf="listings.length > 0">
+    <div class="filter-group">
+      <label>Categoría</label>
+      <select [(ngModel)]="filters.category" (change)="applyFilters()">
+        <option value="">Todas</option>
+        <option *ngFor="let cat of categories" [value]="cat">{{ cat }}</option>
+      </select>
+    </div>
+
+    <div class="filter-group">
+      <label>Ventas mín./día</label>
+      <input type="number" [(ngModel)]="filters.minSales" (input)="applyFilters()" placeholder="0" />
+    </div>
+
+    <div class="filter-group">
+      <label>Conversión mín. %</label>
+      <input type="number" [(ngModel)]="filters.minConversion" (input)="applyFilters()" placeholder="0" />
+    </div>
+
+    <div class="filter-group">
+      <label>Ordenar por</label>
+      <select [(ngModel)]="filters.sortBy" (change)="applyFilters()">
+        <option value="salesPerDay">Ventas/día</option>
+        <option value="conversionRate">Conversión</option>
+        <option value="bsr">BSR</option>
+        <option value="impressions">Impresiones</option>
+        <option value="price">Precio</option>
+      </select>
+    </div>
+
+    <div class="filter-group">
+      <label>Orden</label>
+      <select [(ngModel)]="filters.order" (change)="applyFilters()">
+        <option value="desc">Mayor a menor</option>
+        <option value="asc">Menor a mayor</option>
+      </select>
+    </div>
+
+    <button class="btn btn-danger" (click)="deleteAll()">Borrar todo</button>
+  </div>
+
+  <!-- ── TABLA DE LISTADOS ── -->
+  <div class="card" *ngIf="filteredListings.length > 0">
+    <h2 class="section-title">Listados ({{ filteredListings.length }} resultados)</h2>
+    <div class="table-scroll">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>ASIN</th>
+            <th>Título</th>
+            <th>Categoría</th>
+            <th>Precio</th>
+            <th>Ventas/día</th>
+            <th>Conversión</th>
+            <th>Impresiones</th>
+            <th>Clics</th>
+            <th>BSR</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let listing of filteredListings">
+            <td class="asin">{{ listing.asin }}</td>
+            <td class="title-cell">{{ listing.title }}</td>
+            <td>{{ listing.category }}</td>
+            <td>${{ listing.price | number:'1.2-2' }}</td>
+            <td><strong>{{ listing.salesPerDay }}</strong></td>
+            <td>{{ listing.conversionRate }}%</td>
+            <td>{{ listing.impressions | number }}</td>
+            <td>{{ listing.clicks | number }}</td>
+            <td>{{ listing.bsr | number }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ── ESTADO VACÍO ── -->
+  <div class="card empty-state" *ngIf="listings.length === 0">
+    <span class="empty-icon">&#128202;</span>
+    <h2>No hay datos todavía</h2>
+    <p>Sube un archivo Excel con los datos de tus listados de Amazon para comenzar a analizar.</p>
+  </div>
+</div>

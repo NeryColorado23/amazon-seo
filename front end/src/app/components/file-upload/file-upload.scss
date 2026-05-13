@@ -1,0 +1,8 @@
+.upload-zone {
+  border: 2px dashed #ccc; border-radius: 12px; padding: 36px; text-align: center;
+  cursor: pointer; transition: all 0.2s; background: #fafafa;
+  &:hover { border-color: #1a73e8; background: #f0f4ff; }
+  &.dragover { border-color: #1a73e8; background: #e8f0fe; }
+}
+.upload-icon { font-size: 40px; display: block; margin-bottom: 8px; }
+.file-types { font-size: 12px; color: #aaa; margin-top: 8px; }

@@ -1,0 +1,157 @@
+<div class="keywords-container">
+  <h1 class="page-title">Análisis de Keywords</h1>
+
+  <!-- ── UPLOAD ── -->
+  <div class="card">
+    <h2 class="section-title">Cargar keywords</h2>
+    <p class="section-desc">Sube un Excel con columnas: Keyword, Search Volume, Competing Products, CPC, Relevance</p>
+    <app-file-upload
+      label="Subir Excel de keywords"
+      [loading]="uploading"
+      (fileSelected)="onFileUploaded($event)"
+    ></app-file-upload>
+    <p class="success-msg" *ngIf="uploadMessage">{{ uploadMessage }}</p>
+    <p class="error-msg" *ngIf="uploadError">{{ uploadError }}</p>
+  </div>
+
+  <!-- ── TABS ── -->
+  <div class="tabs" *ngIf="keywords.length > 0">
+    <button [class.active]="activeTab === 'all'" (click)="activeTab = 'all'">Todas ({{ keywords.length }})</button>
+    <button [class.active]="activeTab === 'top'" (click)="activeTab = 'top'">Top 20</button>
+    <button [class.active]="activeTab === 'opportunities'" (click)="activeTab = 'opportunities'">Oportunidades</button>
+  </div>
+
+  <!-- ── FILTROS ── -->
+  <div class="filters-bar" *ngIf="keywords.length > 0 && activeTab === 'all'">
+    <div class="filter-group">
+      <label>Volumen mínimo</label>
+      <input type="number" [(ngModel)]="filters.minVolume" (input)="applyFilters()" placeholder="0" />
+    </div>
+
+    <div class="filter-group">
+      <label>Competidores máx.</label>
+      <input type="number" [(ngModel)]="filters.maxCompetitors" (input)="applyFilters()" placeholder="Todos" />
+    </div>
+
+    <div class="filter-group">
+      <label>Ordenar por</label>
+      <select [(ngModel)]="filters.sortBy" (change)="applyFilters()">
+        <option value="searchVolume">Volumen de búsqueda</option>
+        <option value="competitorCount">Competidores</option>
+        <option value="cpc">CPC</option>
+        <option value="relevance">Relevancia</option>
+      </select>
+    </div>
+
+    <div class="filter-group">
+      <label>Orden</label>
+      <select [(ngModel)]="filters.order" (change)="applyFilters()">
+        <option value="desc">Mayor a menor</option>
+        <option value="asc">Menor a mayor</option>
+      </select>
+    </div>
+
+    <button class="btn btn-danger" (click)="deleteAll()">Borrar todo</button>
+  </div>
+
+  <!-- ── TABLA: TODAS ── -->
+  <div class="card" *ngIf="activeTab === 'all' && keywords.length > 0">
+    <h2 class="section-title">Todas las keywords</h2>
+    <div class="table-scroll">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Keyword</th>
+            <th>Volumen</th>
+            <th>Competidores</th>
+            <th>CPC</th>
+            <th>Relevancia</th>
+            <th>Tendencia</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let kw of keywords; let i = index">
+            <td>{{ i + 1 }}</td>
+            <td><strong>{{ kw.keyword }}</strong></td>
+            <td>{{ kw.searchVolume | number }}</td>
+            <td>{{ kw.competitorCount | number }}</td>
+            <td>${{ kw.cpc | number:'1.2-2' }}</td>
+            <td>
+              <span class="relevance-badge" [class.high]="kw.relevance >= 70" [class.mid]="kw.relevance >= 40 && kw.relevance < 70" [class.low]="kw.relevance < 40">
+                {{ kw.relevance }}
+              </span>
+            </td>
+            <td>
+              <span *ngIf="kw.trend === 'up'" class="trend-up">&#9650; Subiendo</span>
+              <span *ngIf="kw.trend === 'down'" class="trend-down">&#9660; Bajando</span>
+              <span *ngIf="kw.trend === 'stable'" class="trend-stable">&#9632; Estable</span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ── TABLA: TOP 20 ── -->
+  <div class="card" *ngIf="activeTab === 'top' && topKeywords.length > 0">
+    <h2 class="section-title">Top 20 keywords por volumen de búsqueda</h2>
+    <div class="table-scroll">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Keyword</th>
+            <th>Volumen</th>
+            <th>Competidores</th>
+            <th>CPC</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let kw of topKeywords; let i = index">
+            <td><span class="rank-badge">{{ i + 1 }}</span></td>
+            <td><strong>{{ kw.keyword }}</strong></td>
+            <td>{{ kw.searchVolume | number }}</td>
+            <td>{{ kw.competitorCount | number }}</td>
+            <td>${{ kw.cpc | number:'1.2-2' }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ── TABLA: OPORTUNIDADES ── -->
+  <div class="card" *ngIf="activeTab === 'opportunities' && opportunities.length > 0">
+    <h2 class="section-title">Keywords de alta oportunidad</h2>
+    <p class="section-desc">Alto volumen de búsqueda + baja competencia = oportunidad</p>
+    <div class="table-scroll">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Keyword</th>
+            <th>Volumen</th>
+            <th>Competidores</th>
+            <th>Score oportunidad</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let kw of opportunities; let i = index">
+            <td><span class="rank-badge gold">{{ i + 1 }}</span></td>
+            <td><strong>{{ kw.keyword }}</strong></td>
+            <td>{{ kw.searchVolume | number }}</td>
+            <td>{{ kw.competitorCount | number }}</td>
+            <td><strong class="opp-score">{{ kw.opportunityScore | number:'1.1-1' }}</strong></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ── ESTADO VACÍO ── -->
+  <div class="card empty-state" *ngIf="keywords.length === 0">
+    <span class="empty-icon">&#128269;</span>
+    <h2>No hay keywords todavía</h2>
+    <p>Sube un archivo de keywords exportado desde Helium 10, Cerebro o similar para analizar oportunidades.</p>
+  </div>
+</div>

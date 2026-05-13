@@ -1,0 +1,33 @@
+<div
+  class="upload-zone"
+  [class.dragover]="dragover"
+  (drop)="onDrop($event)"
+  (dragover)="onDragOver($event)"
+  (dragleave)="onDragLeave()"
+  (click)="fileInput.click()"
+>
+  <input
+    #fileInput
+    type="file"
+    [accept]="accept"
+    (change)="onFileChange($event)"
+    style="display: none"
+  />
+
+  <div *ngIf="!loading && !fileName">
+    <span class="upload-icon">&#128196;</span>
+    <p><strong>{{ label }}</strong></p>
+    <p>Arrastra tu archivo aquí o haz clic para seleccionar</p>
+    <p class="file-types">Formatos: .xlsx, .xls, .csv</p>
+  </div>
+
+  <div *ngIf="fileName && !loading">
+    <span class="upload-icon">&#9989;</span>
+    <p><strong>{{ fileName }}</strong></p>
+    <p>Archivo cargado exitosamente</p>
+  </div>
+
+  <div *ngIf="loading">
+    <p><strong>Procesando archivo...</strong></p>
+  </div>
+</div>

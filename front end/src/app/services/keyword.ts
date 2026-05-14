@@ -24,8 +24,15 @@ export class KeywordService {
     return this.http.get<any[]>(this.apiUrl, { headers: this.getHeaders(), params: filters });
   }
 
+  getKeywordCategories(): Observable<string[]> {
+    return this.http.get<string[]>(`${this.apiUrl}/categories`, { headers: this.getHeaders() });
+  }
+
   getTopKeywords(count: number = 20): Observable<any[]> {
-    return this.http.get<any[]>(`${this.apiUrl}/top`, { headers: this.getHeaders(), params: { count: count.toString() } });
+    return this.http.get<any[]>(`${this.apiUrl}/top`, {
+      headers: this.getHeaders(),
+      params: { count: count.toString() },
+    });
   }
 
   getOpportunities(): Observable<any[]> {

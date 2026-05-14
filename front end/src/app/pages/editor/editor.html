@@ -1,0 +1,265 @@
+<div class="editor-container">
+  <div class="editor-header">
+    <div class="header-left">
+      <h1>Listing Editor</h1>
+      <input
+        class="draft-name-input"
+        [(ngModel)]="draftName"
+        placeholder="Nombre del borrador..."
+      />
+    </div>
+    <div class="header-actions">
+      <span class="saved-msg">{{ savedMessage }}</span>
+      <button class="btn btn-secondary" (click)="newDraft()">+ Nuevo</button>
+      <button class="btn btn-primary" (click)="saveDraft()" [disabled]="saving">
+        {{ saving ? 'Guardando...' : 'Guardar borrador' }}
+      </button>
+    </div>
+  </div>
+
+  <!-- TABS -->
+  <div class="main-tabs">
+    <button [class.active]="activeTab === 'editor'" (click)="activeTab = 'editor'">✏️ Editor</button>
+    <button [class.active]="activeTab === 'preview'" (click)="activeTab = 'preview'">👁️ Preview Amazon</button>
+    <button [class.active]="activeTab === 'history'" (click)="activeTab = 'history'">📁 Historial ({{ drafts.length }})</button>
+  </div>
+
+  <!-- ══ EDITOR TAB ══ -->
+  <div class="editor-layout" *ngIf="activeTab === 'editor'">
+
+    <!-- PANEL IZQUIERDO: Keywords -->
+    <div class="keywords-panel">
+      <h3>Keywords</h3>
+
+      <!-- Filtros -->
+      <div class="kw-filters">
+        <div class="filter-row">
+          <label>Categoría</label>
+          <select [(ngModel)]="kwFilters.category" (change)="applyFilters()">
+            <option value="">Todas</option>
+            <option *ngFor="let cat of keywordCategories" [value]="cat">{{ cat }}</option>
+          </select>
+        </div>
+
+        <div class="filter-row">
+          <label>Archivo</label>
+          <select [(ngModel)]="kwFilters.uploadId" (change)="applyFilters()">
+            <option value="">Todos</option>
+            <option *ngFor="let up of keywordUploads" [value]="up._id">
+              {{ up.fileName | slice:0:30 }}... ({{ formatDate(up.uploadedAt) }})
+            </option>
+          </select>
+        </div>
+
+        <div class="filter-row">
+          <label>Volumen mín.</label>
+          <input type="number" [(ngModel)]="kwFilters.minVolume" (input)="applyFilters()" placeholder="0" />
+        </div>
+
+        <div class="filter-row">
+          <label>Competidores máx.</label>
+          <input type="number" [(ngModel)]="kwFilters.maxCompetitors" (input)="applyFilters()" placeholder="Todos" />
+        </div>
+
+        <div class="filter-row">
+          <label>Ordenar por</label>
+          <select [(ngModel)]="kwFilters.sortBy" (change)="applyFilters()">
+            <option value="searchVolume">Volumen</option>
+            <option value="keywordSales">KW Sales</option>
+            <option value="competitorCount">Competidores</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Lista de keywords -->
+      <div class="kw-count">{{ filteredKeywords.length }} keywords</div>
+
+      <div class="kw-list" *ngIf="!loadingKeywords">
+        <div
+          class="kw-item"
+          *ngFor="let kw of filteredKeywords"
+          [class.selected]="isSelected(kw.keyword)"
+        >
+          <div class="kw-main">
+            <span class="kw-text" (click)="toggleKeyword(kw.keyword)">
+              <span class="kw-check">{{ isSelected(kw.keyword) ? '✅' : '○' }}</span>
+              {{ kw.keyword }}
+            </span>
+            <span class="kw-vol">{{ kw.searchVolume | number }}</span>
+          </div>
+          <div class="kw-actions">
+            <button class="kw-btn" (click)="addToField(kw.keyword, 'title')" title="Agregar al título">T</button>
+            <button class="kw-btn" (click)="addToField(kw.keyword, 'bullet1')" title="Bullet 1">B1</button>
+            <button class="kw-btn" (click)="addToField(kw.keyword, 'bullet2')" title="Bullet 2">B2</button>
+            <button class="kw-btn" (click)="addToField(kw.keyword, 'bullet3')" title="Bullet 3">B3</button>
+            <button class="kw-btn" (click)="addToField(kw.keyword, 'searchTerms')" title="Search Terms">ST</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="loading" *ngIf="loadingKeywords">Cargando keywords...</div>
+
+      <!-- Keywords seleccionadas -->
+      <div class="selected-kws" *ngIf="selectedKeywords.size > 0">
+        <h4>✅ Seleccionadas ({{ selectedKeywords.size }})</h4>
+        <div class="selected-tags">
+          <span
+            class="kw-tag"
+            *ngFor="let kw of selectedKeywordsArray"
+            (click)="toggleKeyword(kw)"
+          >{{ kw }} ✕</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- PANEL DERECHO: Listing fields -->
+    <div class="listing-panel">
+
+      <!-- TÍTULO -->
+      <div class="field-group">
+        <div class="field-header">
+          <label>Título</label>
+          <span class="char-counter" [class.over]="isOverLimit(title, limits.title)">
+            {{ charCount(title) }}/{{ limits.title }}
+          </span>
+        </div>
+        <textarea
+          [(ngModel)]="title"
+          rows="3"
+          placeholder="Incluye keywords principales, marca, características clave..."
+          [class.over-limit]="isOverLimit(title, limits.title)"
+        ></textarea>
+        <div class="field-hint">Amazon permite hasta 200 bytes. Incluye las keywords de mayor volumen.</div>
+      </div>
+
+      <!-- BULLET POINTS -->
+      <div class="field-group" *ngFor="let n of [1,2,3,4,5]">
+        <div class="field-header">
+          <label>Bullet Point #{{ n }}</label>
+          <span class="char-counter" [class.over]="isOverLimit(n === 1 ? bullet1 : n === 2 ? bullet2 : n === 3 ? bullet3 : n === 4 ? bullet4 : bullet5, limits.bullet)">
+            {{ charCount(n === 1 ? bullet1 : n === 2 ? bullet2 : n === 3 ? bullet3 : n === 4 ? bullet4 : bullet5) }}/{{ limits.bullet }}
+          </span>
+        </div>
+        <textarea
+          [ngModel]="n === 1 ? bullet1 : n === 2 ? bullet2 : n === 3 ? bullet3 : n === 4 ? bullet4 : bullet5"
+          (ngModelChange)="n === 1 ? bullet1 = $event : n === 2 ? bullet2 = $event : n === 3 ? bullet3 = $event : n === 4 ? bullet4 = $event : bullet5 = $event"
+          rows="2"
+          [placeholder]="'Bullet ' + n + ': beneficio, característica o keyword importante...'"
+          [class.over-limit]="isOverLimit(n === 1 ? bullet1 : n === 2 ? bullet2 : n === 3 ? bullet3 : n === 4 ? bullet4 : bullet5, limits.bullet)"
+        ></textarea>
+      </div>
+
+      <!-- DESCRIPCIÓN -->
+      <div class="field-group">
+        <div class="field-header">
+          <label>Descripción</label>
+          <span class="char-counter" [class.over]="isOverLimit(description, limits.description)">
+            {{ charCount(description) }}/{{ limits.description }}
+          </span>
+        </div>
+        <textarea
+          [(ngModel)]="description"
+          rows="5"
+          placeholder="Descripción detallada del producto. Puedes incluir keywords secundarias aquí..."
+          [class.over-limit]="isOverLimit(description, limits.description)"
+        ></textarea>
+      </div>
+
+      <!-- SEARCH TERMS -->
+      <div class="field-group">
+        <div class="field-header">
+          <label>Search Terms (Backend)</label>
+          <span class="char-counter" [class.over]="isOverLimit(searchTerms, limits.searchTerms)">
+            {{ charCount(searchTerms) }}/{{ limits.searchTerms }}
+          </span>
+        </div>
+        <textarea
+          [(ngModel)]="searchTerms"
+          rows="3"
+          placeholder="Keywords separadas por espacios. No repetir las del título ni bullets..."
+          [class.over-limit]="isOverLimit(searchTerms, limits.searchTerms)"
+        ></textarea>
+        <div class="field-hint">Máximo 250 bytes. No usar comas, no repetir keywords ya usadas.</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ══ PREVIEW TAB ══ -->
+  <div class="preview-container" *ngIf="activeTab === 'preview'">
+    <div class="amazon-preview">
+      <div class="preview-header">
+        <span class="preview-badge">Vista previa Amazon</span>
+      </div>
+
+      <!-- Título -->
+      <div class="preview-title">
+        {{ title || 'Tu título aparecerá aquí...' }}
+      </div>
+
+      <!-- Bullets -->
+      <div class="preview-bullets">
+        <ul>
+          <li *ngIf="bullet1">{{ bullet1 }}</li>
+          <li *ngIf="bullet2">{{ bullet2 }}</li>
+          <li *ngIf="bullet3">{{ bullet3 }}</li>
+          <li *ngIf="bullet4">{{ bullet4 }}</li>
+          <li *ngIf="bullet5">{{ bullet5 }}</li>
+          <li *ngIf="!bullet1 && !bullet2" class="placeholder-text">Los bullet points aparecerán aquí...</li>
+        </ul>
+      </div>
+
+      <!-- Descripción -->
+      <div class="preview-section">
+        <h4>Descripción del producto</h4>
+        <p class="preview-description">{{ description || 'La descripción aparecerá aquí...' }}</p>
+      </div>
+
+      <!-- Search Terms -->
+      <div class="preview-section preview-backend">
+        <h4>🔒 Search Terms (solo visible en backend de Amazon)</h4>
+        <p class="preview-search-terms">{{ searchTerms || 'Los search terms aparecerán aquí...' }}</p>
+      </div>
+
+      <!-- Keywords usadas -->
+      <div class="preview-section" *ngIf="selectedKeywords.size > 0">
+        <h4>✅ Keywords incluidas ({{ selectedKeywords.size }})</h4>
+        <div class="preview-tags">
+          <span class="preview-tag" *ngFor="let kw of selectedKeywordsArray">{{ kw }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ HISTORY TAB ══ -->
+  <div class="history-container" *ngIf="activeTab === 'history'">
+    <div class="history-header">
+      <h2>Historial de borradores</h2>
+      <button class="btn btn-primary" (click)="newDraft(); activeTab = 'editor'">+ Nuevo listing</button>
+    </div>
+
+    <div class="drafts-list" *ngIf="drafts.length > 0">
+      <div class="draft-card" *ngFor="let draft of drafts">
+        <div class="draft-info">
+          <strong>{{ draft.name }}</strong>
+          <span class="draft-category" *ngIf="draft.category">📁 {{ draft.category }}</span>
+          <span class="draft-date">🕐 {{ formatDate(draft.savedAt) }}</span>
+          <span class="draft-kws" *ngIf="draft.keywordsUsed?.length > 0">
+            🔑 {{ draft.keywordsUsed.length }} keywords usadas
+          </span>
+          <div class="draft-preview-text" *ngIf="draft.title">{{ draft.title | slice:0:80 }}...</div>
+        </div>
+        <div class="draft-actions">
+          <button class="btn btn-secondary" (click)="loadDraft(draft)">✏️ Editar</button>
+          <button class="btn btn-danger" (click)="deleteDraft(draft._id)">🗑️</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="empty-state" *ngIf="drafts.length === 0">
+      <span class="empty-icon">📝</span>
+      <h3>No hay borradores guardados</h3>
+      <p>Crea tu primer listing y guárdalo para verlo aquí.</p>
+    </div>
+  </div>
+</div>

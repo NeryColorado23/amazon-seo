@@ -6,6 +6,11 @@ const listingSchema = new mongoose.Schema({
     ref: 'User',
     required: true,
   },
+  uploadId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Upload',
+    default: null,
+  },
   asin: { type: String, default: '' },
   title: { type: String, default: '' },
   category: { type: String, default: 'Sin categoría' },

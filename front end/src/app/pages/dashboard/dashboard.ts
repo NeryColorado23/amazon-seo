@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ListingService } from '../../services/listing';
+import { UploadService } from '../../services/upload';
 import { FileUpload } from '../../components/file-upload/file-upload';
 
 @Component({
@@ -17,11 +18,12 @@ export class Dashboard implements OnInit {
   categories: string[] = [];
   stats: any = null;
   categoryStats: any[] = [];
+  uploads: any[] = [];
+  selectedUploadId = '';
   uploading = false;
   uploadMessage = '';
   uploadError = '';
 
-  // Filtros
   filters = {
     category: '',
     minSales: '',
@@ -30,14 +32,29 @@ export class Dashboard implements OnInit {
     order: 'desc',
   };
 
-  constructor(private listingService: ListingService) {}
+  constructor(
+    private listingService: ListingService,
+    private uploadService: UploadService
+  ) {}
 
   ngOnInit(): void {
+    this.loadUploads();
     this.loadData();
   }
 
+  loadUploads(): void {
+    this.uploadService.getUploads().subscribe({
+      next: (data) => {
+        this.uploads = data.filter((u) => u.type === 'listings');
+      },
+    });
+  }
+
   loadData(): void {
-    this.listingService.getListings().subscribe({
+    const params: any = {};
+    if (this.selectedUploadId) params['uploadId'] = this.selectedUploadId;
+
+    this.listingService.getListings(params).subscribe({
       next: (data) => {
         this.listings = data;
         this.applyFilters();
@@ -48,12 +65,18 @@ export class Dashboard implements OnInit {
       next: (cats) => (this.categories = cats),
     });
 
-    this.listingService.getStats().subscribe({
+    this.listingService.getStats(
+      this.filters.category || undefined
+    ).subscribe({
       next: (data) => {
         this.stats = data.totals;
         this.categoryStats = data.byCategory;
       },
     });
+  }
+
+  onUploadSelected(): void {
+    this.loadData();
   }
 
   onFileUploaded(file: File): void {
@@ -62,16 +85,33 @@ export class Dashboard implements OnInit {
     this.uploadError = '';
 
     this.listingService.uploadExcel(file).subscribe({
-      next: (res) => {
+      next: (res: any) => {
         this.uploadMessage = res.message;
         this.uploading = false;
-        this.loadData();
+        setTimeout(() => {
+          this.loadUploads();
+          this.loadData();
+        }, 500);
       },
       error: (err) => {
         this.uploadError = err.error?.message || 'Error al subir el archivo';
         this.uploading = false;
       },
     });
+  }
+
+  deleteUpload(upload: any): void {
+    if (confirm(`¿Eliminar "${upload.fileName}" y sus ${upload.recordCount} registros?`)) {
+      this.uploadService.deleteUpload(upload._id).subscribe({
+        next: () => {
+          if (this.selectedUploadId === upload._id) {
+            this.selectedUploadId = '';
+          }
+          this.loadUploads();
+          this.loadData();
+        },
+      });
+    }
   }
 
   applyFilters(): void {
@@ -87,46 +127,39 @@ export class Dashboard implements OnInit {
       result = result.filter((l) => l.conversionRate >= +this.filters.minConversion);
     }
 
-    // Ordenar
-    const key = this.filters.sortBy as keyof any;
+    const key = this.filters.sortBy;
     const dir = this.filters.order === 'asc' ? 1 : -1;
     result.sort((a, b) => (a[key] > b[key] ? dir : -dir));
 
     this.filteredListings = result;
   }
 
-  deleteAll(): void {
-    if (confirm('¿Estás seguro de eliminar todos los listados? Esta acción no se puede deshacer.')) {
-      this.listingService.deleteAll().subscribe({
-        next: () => {
-          this.listings = [];
-          this.filteredListings = [];
-          this.stats = null;
-          this.categoryStats = [];
-          this.categories = [];
-        },
-      });
-    }
+  formatDate(dateStr: string): string {
+    const d = new Date(dateStr);
+    return d.toLocaleDateString('es-GT', {
+      day: '2-digit', month: 'short', year: 'numeric',
+      hour: '2-digit', minute: '2-digit',
+    });
   }
 
-  // Helpers para métricas
   get avgConversion(): string {
-    if (!this.stats?.avgConversionRate) return '0';
-    return this.stats.avgConversionRate.toFixed(2);
+    return this.stats?.avgConversionRate?.toFixed(2) || '0';
   }
-
   get avgSales(): string {
-    if (!this.stats?.avgSalesPerDay) return '0';
-    return this.stats.avgSalesPerDay.toFixed(1);
+    return this.stats?.avgSalesPerDay?.toFixed(1) || '0';
   }
-
   get totalImpressions(): string {
-    if (!this.stats?.totalImpressions) return '0';
-    return this.stats.totalImpressions.toLocaleString();
+    return this.stats?.totalImpressions?.toLocaleString() || '0';
   }
-
   get avgPrice(): string {
-    if (!this.stats?.avgPrice) return '0';
-    return '$' + this.stats.avgPrice.toFixed(2);
+    return this.stats?.avgPrice ? '$' + this.stats.avgPrice.toFixed(2) : '$0';
+  }
+  get totalSales(): string {
+    return this.stats?.totalOrderedProductSales
+      ? '$' + this.stats.totalOrderedProductSales.toLocaleString()
+      : '$0';
+  }
+  get totalUnits(): string {
+    return this.stats?.totalUnitsOrdered?.toLocaleString() || '0';
   }
 }

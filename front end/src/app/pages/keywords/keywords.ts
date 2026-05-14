@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { KeywordService } from '../../services/keyword';
+import { UploadService } from '../../services/upload';
 import { FileUpload } from '../../components/file-upload/file-upload';
 
 @Component({
@@ -15,6 +16,8 @@ export class Keywords implements OnInit {
   keywords: any[] = [];
   topKeywords: any[] = [];
   opportunities: any[] = [];
+  uploads: any[] = [];
+  selectedUploadId = '';
   uploading = false;
   uploadMessage = '';
   uploadError = '';
@@ -28,10 +31,22 @@ export class Keywords implements OnInit {
     order: 'desc',
   };
 
-  constructor(private keywordService: KeywordService) {}
+  constructor(
+    private keywordService: KeywordService,
+    private uploadService: UploadService
+  ) {}
 
   ngOnInit(): void {
+    this.loadUploads();
     this.loadData();
+  }
+
+  loadUploads(): void {
+    this.uploadService.getUploads().subscribe({
+      next: (data) => {
+        this.uploads = data.filter((u) => u.type === 'keywords');
+      },
+    });
   }
 
   loadData(): void {
@@ -43,27 +58,26 @@ export class Keywords implements OnInit {
     };
     if (this.filters.minVolume) params['minVolume'] = this.filters.minVolume;
     if (this.filters.maxCompetitors) params['maxCompetitors'] = this.filters.maxCompetitors;
+    if (this.selectedUploadId) params['uploadId'] = this.selectedUploadId;
 
     this.keywordService.getKeywords(params).subscribe({
-      next: (data) => {
-        this.keywords = data;
-        this.loading = false;
-      },
-      error: (err) => {
-        console.error('Error cargando keywords:', err);
-        this.loading = false;
-      },
+      next: (data) => { this.keywords = data; this.loading = false; },
+      error: () => { this.loading = false; },
     });
 
+    const topParams: any = { count: '20' };
+    if (this.selectedUploadId) topParams['uploadId'] = this.selectedUploadId;
     this.keywordService.getTopKeywords(20).subscribe({
       next: (data) => (this.topKeywords = data),
-      error: (err) => console.error('Error top keywords:', err),
     });
 
     this.keywordService.getOpportunities().subscribe({
       next: (data) => (this.opportunities = data),
-      error: (err) => console.error('Error opportunities:', err),
     });
+  }
+
+  onUploadSelected(): void {
+    this.loadData();
   }
 
   onFileUploaded(file: File): void {
@@ -75,8 +89,10 @@ export class Keywords implements OnInit {
       next: (res: any) => {
         this.uploadMessage = res.message;
         this.uploading = false;
-        // Esperar un momento y recargar
-        setTimeout(() => this.loadData(), 500);
+        setTimeout(() => {
+          this.loadUploads();
+          this.loadData();
+        }, 500);
       },
       error: (err) => {
         this.uploadError = err.error?.message || 'Error al subir el archivo';
@@ -85,8 +101,28 @@ export class Keywords implements OnInit {
     });
   }
 
+  deleteUpload(upload: any): void {
+    if (confirm(`¿Eliminar "${upload.fileName}" y sus ${upload.recordCount} keywords?`)) {
+      this.uploadService.deleteUpload(upload._id).subscribe({
+        next: () => {
+          if (this.selectedUploadId === upload._id) this.selectedUploadId = '';
+          this.loadUploads();
+          this.loadData();
+        },
+      });
+    }
+  }
+
   applyFilters(): void {
     this.loadData();
+  }
+
+  formatDate(dateStr: string): string {
+    const d = new Date(dateStr);
+    return d.toLocaleDateString('es-GT', {
+      day: '2-digit', month: 'short', year: 'numeric',
+      hour: '2-digit', minute: '2-digit',
+    });
   }
 
   deleteAll(): void {
@@ -96,6 +132,7 @@ export class Keywords implements OnInit {
           this.keywords = [];
           this.topKeywords = [];
           this.opportunities = [];
+          this.uploads = [];
           this.uploadMessage = '';
         },
       });

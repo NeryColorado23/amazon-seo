@@ -7,14 +7,11 @@ connectDB();
 
 const app = express();
 
-// CORS manual
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
-  if (req.method === 'OPTIONS') {
-    return res.sendStatus(200);
-  }
+  if (req.method === 'OPTIONS') return res.sendStatus(200);
   next();
 });
 
@@ -24,6 +21,8 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/listings', require('./routes/listings'));
 app.use('/api/keywords', require('./routes/keywords'));
+app.use('/api/uploads', require('./routes/uploads'));
+app.use('/api/drafts', require('./routes/drafts'));
 
 app.get('/', (req, res) => {
   res.json({ message: 'Amazon SEO API funcionando correctamente', status: 'ok' });

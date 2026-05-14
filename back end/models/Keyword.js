@@ -6,6 +6,11 @@ const keywordSchema = new mongoose.Schema({
     ref: 'User',
     required: true,
   },
+  uploadId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Upload',
+    default: null,
+  },
   keyword: { type: String, required: true, trim: true },
   searchVolume: { type: Number, default: 0 },
   competitorCount: { type: Number, default: 0 },

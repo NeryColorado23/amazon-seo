@@ -4,38 +4,102 @@
 .section-desc { font-size: 13px; color: #888; margin-bottom: 16px; }
 .table-scroll { overflow-x: auto; }
 
+.uploads-list { display: flex; flex-direction: column; gap: 8px; }
+
+.upload-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border: 2px solid #eee;
+  border-radius: 8px;
+  transition: all 0.2s;
+  &:hover { border-color: #1a73e8; background: #f0f4ff; }
+  &.selected { border-color: #1a73e8; background: #e8f0fe; }
+}
+
+.upload-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  cursor: pointer;
+}
+
+.upload-icon { font-size: 24px; }
+
+.upload-details {
+  display: flex;
+  flex-direction: column;
+  strong { font-size: 14px; color: #333; }
+}
+
+.upload-meta { font-size: 12px; color: #888; margin-top: 2px; }
+
+.btn-delete-upload {
+  background: none;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: background 0.2s;
+  &:hover { background: #fee2e2; }
+}
+
+.upload-hint { font-size: 13px; color: #888; margin-top: 12px; }
+.btn-link {
+  background: none;
+  border: none;
+  color: #1a73e8;
+  cursor: pointer;
+  font-size: 13px;
+  text-decoration: underline;
+}
+
 .tabs {
-  display: flex; gap: 4px; margin-bottom: 20px; background: #fff; padding: 6px;
-  border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  display: flex;
+  gap: 4px;
+  margin-bottom: 20px;
+  background: #fff;
+  padding: 6px;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+
   button {
-    padding: 10px 20px; border: none; background: transparent; border-radius: 6px;
-    cursor: pointer; font-size: 13px; font-weight: 600; color: #888; transition: all 0.2s;
+    padding: 10px 20px;
+    border: none;
+    background: transparent;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    color: #888;
+    transition: all 0.2s;
     &.active { background: #1a73e8; color: #fff; }
     &:hover:not(.active) { background: #f0f0f0; }
   }
 }
 
 .rank-badge {
-  display: inline-block; width: 28px; height: 28px; line-height: 28px;
-  text-align: center; border-radius: 50%; background: #e8f0fe; color: #1a73e8;
-  font-size: 12px; font-weight: 700;
+  display: inline-block;
+  width: 28px;
+  height: 28px;
+  line-height: 28px;
+  text-align: center;
+  border-radius: 50%;
+  background: #e8f0fe;
+  color: #1a73e8;
+  font-size: 12px;
+  font-weight: 700;
   &.gold { background: #fff3cd; color: #856404; }
 }
 
-.relevance-badge {
-  padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 600;
-  &.high { background: #d4edda; color: #155724; }
-  &.mid { background: #fff3cd; color: #856404; }
-  &.low { background: #f8d7da; color: #721c24; }
-}
-
-.trend-up { color: #28a745; font-size: 12px; font-weight: 600; }
-.trend-down { color: #dc3545; font-size: 12px; font-weight: 600; }
-.trend-stable { color: #888; font-size: 12px; }
-
 .opp-score { color: #f59e0b; font-size: 15px; }
 
-.empty-state { text-align: center; padding: 60px 20px;
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
   .empty-icon { font-size: 48px; display: block; margin-bottom: 16px; }
   h2 { color: #555; margin-bottom: 8px; }
   p { color: #888; font-size: 14px; }

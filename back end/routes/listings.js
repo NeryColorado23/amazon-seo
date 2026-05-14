@@ -2,6 +2,7 @@ const express = require('express');
 const multer = require('multer');
 const xlsx = require('xlsx');
 const Listing = require('../models/Listing');
+const Upload = require('../models/Upload');
 const auth = require('../middleware/auth');
 
 const router = express.Router();
@@ -23,6 +24,15 @@ router.post('/upload', auth, upload.single('file'), async (req, res) => {
       return res.status(400).json({ message: 'El archivo está vacío.' });
     }
 
+    // Crear registro de upload
+    const uploadRecord = new Upload({
+      userId: req.user.id,
+      type: 'listings',
+      fileName: req.file.originalname,
+      recordCount: rawData.length,
+    });
+    await uploadRecord.save();
+
     const cleanNumber = (val) => {
       if (!val) return 0;
       return parseFloat(String(val).replace(/[$,>]/g, '')) || 0;
@@ -30,6 +40,7 @@ router.post('/upload', auth, upload.single('file'), async (req, res) => {
 
     const listings = rawData.map((row) => ({
       userId: req.user.id,
+      uploadId: uploadRecord._id,
       asin: row['Identifier'] || row['ASIN'] || row['asin'] || '',
       title: row['Title'] || row['Titulo'] || row['title'] || '',
       category: row['Category'] || row['Categoria'] || row['category'] || 'Sin categoría',
@@ -44,11 +55,12 @@ router.post('/upload', auth, upload.single('file'), async (req, res) => {
       totalOrderItems: cleanNumber(row['Total Order Items'] || 0),
     }));
 
-    const result = await Listing.insertMany(listings);
+    await Listing.insertMany(listings);
 
     return res.status(201).json({
-      message: `${result.length} listados cargados exitosamente.`,
-      count: result.length,
+      message: `${listings.length} listados cargados exitosamente.`,
+      count: listings.length,
+      uploadId: uploadRecord._id,
     });
   } catch (error) {
     return res.status(500).json({ message: 'Error al procesar el archivo', error: error.message });
@@ -58,20 +70,16 @@ router.post('/upload', auth, upload.single('file'), async (req, res) => {
 // GET /api/listings
 router.get('/', auth, async (req, res) => {
   try {
-    const { category, minSales, minConversion, sortBy, order } = req.query;
+    const { category, minSales, minConversion, sortBy, order, uploadId } = req.query;
 
     let query = { userId: req.user.id };
-
     if (category) query.category = category;
     if (minSales) query.salesPerDay = { $gte: parseFloat(minSales) };
     if (minConversion) query.conversionRate = { $gte: parseFloat(minConversion) };
+    if (uploadId) query.uploadId = uploadId;
 
     let sortOption = {};
-    if (sortBy) {
-      sortOption[sortBy] = order === 'asc' ? 1 : -1;
-    } else {
-      sortOption.salesPerDay = -1;
-    }
+    sortOption[sortBy || 'salesPerDay'] = order === 'asc' ? 1 : -1;
 
     const listings = await Listing.find(query).sort(sortOption);
     return res.json(listings);
@@ -94,10 +102,11 @@ router.get('/categories', auth, async (req, res) => {
 router.get('/stats', auth, async (req, res) => {
   try {
     const mongoose = require('mongoose');
-    const { category } = req.query;
+    const { category, uploadId } = req.query;
 
     let match = { userId: new mongoose.Types.ObjectId(req.user.id) };
     if (category) match.category = category;
+    if (uploadId) match.uploadId = new mongoose.Types.ObjectId(uploadId);
 
     const stats = await Listing.aggregate([
       { $match: match },

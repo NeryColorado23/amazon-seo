@@ -8,16 +8,16 @@
       <div class="metric-label">Total listados</div>
     </div>
     <div class="metric-card">
+      <div class="metric-value">{{ totalUnits }}</div>
+      <div class="metric-label">Unidades vendidas</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-value">{{ totalSales }}</div>
+      <div class="metric-label">Ventas totales</div>
+    </div>
+    <div class="metric-card">
       <div class="metric-value">{{ avgSales }}</div>
-      <div class="metric-label">Promedio ventas/día</div>
-    </div>
-    <div class="metric-card">
-      <div class="metric-value">{{ avgConversion }}%</div>
-      <div class="metric-label">Conversión promedio</div>
-    </div>
-    <div class="metric-card">
-      <div class="metric-value">{{ totalImpressions }}</div>
-      <div class="metric-label">Total impresiones</div>
+      <div class="metric-label">Promedio unidades/listing</div>
     </div>
     <div class="metric-card">
       <div class="metric-value">{{ avgPrice }}</div>
@@ -29,6 +29,30 @@
     </div>
   </div>
 
+  <!-- ── HISTORIAL DE UPLOADS ── -->
+  <div class="card" *ngIf="uploads.length > 0">
+    <h2 class="section-title">📁 Historial de reportes subidos</h2>
+    <div class="uploads-list">
+      <div
+        class="upload-item"
+        *ngFor="let up of uploads"
+        [class.selected]="selectedUploadId === up._id"
+      >
+        <div class="upload-info" (click)="selectedUploadId = up._id === selectedUploadId ? '' : up._id; onUploadSelected()">
+          <span class="upload-icon">📊</span>
+          <div class="upload-details">
+            <strong>{{ up.fileName }}</strong>
+            <span class="upload-meta">{{ up.recordCount }} registros · {{ formatDate(up.uploadedAt) }}</span>
+          </div>
+        </div>
+        <button class="btn-delete-upload" (click)="deleteUpload(up)" title="Eliminar este reporte">🗑️</button>
+      </div>
+    </div>
+    <p class="upload-hint" *ngIf="selectedUploadId">
+      Mostrando reporte seleccionado. <button class="btn-link" (click)="selectedUploadId = ''; onUploadSelected()">Ver todos</button>
+    </p>
+  </div>
+
   <!-- ── STATS POR CATEGORÍA ── -->
   <div class="card" *ngIf="categoryStats.length > 0">
     <h2 class="section-title">Rendimiento por categoría</h2>
@@ -38,22 +62,18 @@
           <tr>
             <th>Categoría</th>
             <th>Listados</th>
-            <th>Ventas/día prom.</th>
-            <th>Conversión prom.</th>
+            <th>Unidades vendidas</th>
+            <th>Ventas ($)</th>
             <th>BSR prom.</th>
-            <th>Impresiones</th>
-            <th>Clics</th>
           </tr>
         </thead>
         <tbody>
           <tr *ngFor="let cat of categoryStats">
             <td><strong>{{ cat._id }}</strong></td>
             <td>{{ cat.totalListings }}</td>
-            <td>{{ cat.avgSalesPerDay | number:'1.1-1' }}</td>
-            <td>{{ cat.avgConversionRate | number:'1.2-2' }}%</td>
+            <td>{{ cat.totalUnitsOrdered | number }}</td>
+            <td>${{ cat.totalOrderedProductSales | number:'1.2-2' }}</td>
             <td>{{ cat.avgBSR | number:'1.0-0' }}</td>
-            <td>{{ cat.totalImpressions | number }}</td>
-            <td>{{ cat.totalClicks | number }}</td>
           </tr>
         </tbody>
       </table>
@@ -62,15 +82,15 @@
 
   <!-- ── UPLOAD ── -->
   <div class="card">
-    <h2 class="section-title">Cargar datos de listados</h2>
-    <p class="section-desc">Sube un Excel con columnas: ASIN, Title, Category, Price, Sales/Day, Conversion Rate, Impressions, Clicks, BSR</p>
+    <h2 class="section-title">Cargar nuevo reporte</h2>
+    <p class="section-desc">Sube un Excel de Amazon con columnas: Identifier, Title, Category, Units Ordered, Ordered Product Sales, Total Order Items</p>
     <app-file-upload
       label="Subir Excel de listados"
       [loading]="uploading"
       (fileSelected)="onFileUploaded($event)"
     ></app-file-upload>
-    <p class="success-msg" *ngIf="uploadMessage">{{ uploadMessage }}</p>
-    <p class="error-msg" *ngIf="uploadError">{{ uploadError }}</p>
+    <p class="success-msg" *ngIf="uploadMessage">✅ {{ uploadMessage }}</p>
+    <p class="error-msg" *ngIf="uploadError">❌ {{ uploadError }}</p>
   </div>
 
   <!-- ── FILTROS ── -->
@@ -82,28 +102,19 @@
         <option *ngFor="let cat of categories" [value]="cat">{{ cat }}</option>
       </select>
     </div>
-
     <div class="filter-group">
-      <label>Ventas mín./día</label>
+      <label>Unidades mín.</label>
       <input type="number" [(ngModel)]="filters.minSales" (input)="applyFilters()" placeholder="0" />
     </div>
-
-    <div class="filter-group">
-      <label>Conversión mín. %</label>
-      <input type="number" [(ngModel)]="filters.minConversion" (input)="applyFilters()" placeholder="0" />
-    </div>
-
     <div class="filter-group">
       <label>Ordenar por</label>
       <select [(ngModel)]="filters.sortBy" (change)="applyFilters()">
-        <option value="salesPerDay">Ventas/día</option>
-        <option value="conversionRate">Conversión</option>
+        <option value="salesPerDay">Unidades vendidas</option>
+        <option value="orderedProductSales">Ventas ($)</option>
         <option value="bsr">BSR</option>
-        <option value="impressions">Impresiones</option>
         <option value="price">Precio</option>
       </select>
     </div>
-
     <div class="filter-group">
       <label>Orden</label>
       <select [(ngModel)]="filters.order" (change)="applyFilters()">
@@ -111,26 +122,21 @@
         <option value="asc">Menor a mayor</option>
       </select>
     </div>
-
-    <button class="btn btn-danger" (click)="deleteAll()">Borrar todo</button>
   </div>
 
-  <!-- ── TABLA DE LISTADOS ── -->
+  <!-- ── TABLA ── -->
   <div class="card" *ngIf="filteredListings.length > 0">
     <h2 class="section-title">Listados ({{ filteredListings.length }} resultados)</h2>
     <div class="table-scroll">
       <table class="data-table">
         <thead>
           <tr>
-            <th>ASIN</th>
+            <th>Identifier</th>
             <th>Título</th>
             <th>Categoría</th>
-            <th>Precio</th>
-            <th>Ventas/día</th>
-            <th>Conversión</th>
-            <th>Impresiones</th>
-            <th>Clics</th>
-            <th>BSR</th>
+            <th>Unidades</th>
+            <th>Ventas ($)</th>
+            <th>Order Items</th>
           </tr>
         </thead>
         <tbody>
@@ -138,22 +144,19 @@
             <td class="asin">{{ listing.asin }}</td>
             <td class="title-cell">{{ listing.title }}</td>
             <td>{{ listing.category }}</td>
-            <td>${{ listing.price | number:'1.2-2' }}</td>
-            <td><strong>{{ listing.salesPerDay }}</strong></td>
-            <td>{{ listing.conversionRate }}%</td>
-            <td>{{ listing.impressions | number }}</td>
-            <td>{{ listing.clicks | number }}</td>
-            <td>{{ listing.bsr | number }}</td>
+            <td><strong>{{ listing.salesPerDay | number }}</strong></td>
+            <td>${{ listing.orderedProductSales | number:'1.2-2' }}</td>
+            <td>{{ listing.totalOrderItems | number }}</td>
           </tr>
         </tbody>
       </table>
     </div>
   </div>
 
-  <!-- ── ESTADO VACÍO ── -->
-  <div class="card empty-state" *ngIf="listings.length === 0">
-    <span class="empty-icon">&#128202;</span>
+  <!-- ── VACÍO ── -->
+  <div class="card empty-state" *ngIf="listings.length === 0 && uploads.length === 0">
+    <span class="empty-icon">📊</span>
     <h2>No hay datos todavía</h2>
-    <p>Sube un archivo Excel con los datos de tus listados de Amazon para comenzar a analizar.</p>
+    <p>Sube tu primer reporte de Amazon para comenzar.</p>
   </div>
 </div>

@@ -2,6 +2,7 @@ const express = require('express');
 const multer = require('multer');
 const xlsx = require('xlsx');
 const Keyword = require('../models/Keyword');
+const Upload = require('../models/Upload');
 const auth = require('../middleware/auth');
 
 const router = express.Router();
@@ -23,6 +24,15 @@ router.post('/upload', auth, upload.single('file'), async (req, res) => {
       return res.status(400).json({ message: 'El archivo está vacío.' });
     }
 
+    // Crear registro de upload
+    const uploadRecord = new Upload({
+      userId: req.user.id,
+      type: 'keywords',
+      fileName: req.file.originalname,
+      recordCount: rawData.length,
+    });
+    await uploadRecord.save();
+
     const cleanNumber = (val) => {
       if (!val) return 0;
       return parseFloat(String(val).replace(/[$,>]/g, '')) || 0;
@@ -30,11 +40,12 @@ router.post('/upload', auth, upload.single('file'), async (req, res) => {
 
     const keywords = rawData.map((row) => ({
       userId: req.user.id,
+      uploadId: uploadRecord._id,
       keyword: row['Keyword Phrase'] || row['Keyword'] || row['keyword'] || '',
-      searchVolume: cleanNumber(row['Search Volume'] || row['Volume'] || row['Volumen'] || 0),
-      competitorCount: cleanNumber(row['Competing Products'] || row['Competitors'] || row['Competidores'] || 0),
+      searchVolume: cleanNumber(row['Search Volume'] || row['Volume'] || 0),
+      competitorCount: cleanNumber(row['Competing Products'] || row['Competitors'] || 0),
       cpc: cleanNumber(row['CPC'] || row['Suggested PPC Bid'] || 0),
-      relevance: cleanNumber(row['Cerebro IQ Score'] || row['Relevance'] || row['Relevancia'] || 0),
+      relevance: cleanNumber(row['Cerebro IQ Score'] || row['Relevance'] || 0),
       trend: row['Trend'] || row['Search Volume Trend'] || 'stable',
       keywordSales: cleanNumber(row['Keyword Sales'] || 0),
       sponsoredAsins: cleanNumber(row['Sponsored ASINs'] || 0),
@@ -42,11 +53,12 @@ router.post('/upload', auth, upload.single('file'), async (req, res) => {
       category: row['Category'] || row['Categoria'] || '',
     }));
 
-    const result = await Keyword.insertMany(keywords);
+    await Keyword.insertMany(keywords);
 
     return res.status(201).json({
-      message: `${result.length} keywords cargadas exitosamente.`,
-      count: result.length,
+      message: `${keywords.length} keywords cargadas exitosamente.`,
+      count: keywords.length,
+      uploadId: uploadRecord._id,
     });
   } catch (error) {
     return res.status(500).json({ message: 'Error al procesar el archivo', error: error.message });
@@ -56,11 +68,12 @@ router.post('/upload', auth, upload.single('file'), async (req, res) => {
 // GET /api/keywords
 router.get('/', auth, async (req, res) => {
   try {
-    const { minVolume, maxCompetitors, sortBy, order, limit } = req.query;
+    const { minVolume, maxCompetitors, sortBy, order, limit, uploadId } = req.query;
 
     let query = { userId: req.user.id };
     if (minVolume) query.searchVolume = { $gte: parseFloat(minVolume) };
     if (maxCompetitors) query.competitorCount = { $lte: parseFloat(maxCompetitors) };
+    if (uploadId) query.uploadId = uploadId;
 
     let sortOption = {};
     sortOption[sortBy || 'searchVolume'] = order === 'asc' ? 1 : -1;
@@ -75,8 +88,12 @@ router.get('/', auth, async (req, res) => {
 // GET /api/keywords/top
 router.get('/top', auth, async (req, res) => {
   try {
+    const { uploadId } = req.query;
     const topCount = parseInt(req.query.count) || 20;
-    const topKeywords = await Keyword.find({ userId: req.user.id })
+    let query = { userId: req.user.id };
+    if (uploadId) query.uploadId = uploadId;
+
+    const topKeywords = await Keyword.find(query)
       .sort({ searchVolume: -1 })
       .limit(topCount);
     return res.json(topKeywords);
@@ -89,9 +106,13 @@ router.get('/top', auth, async (req, res) => {
 router.get('/opportunities', auth, async (req, res) => {
   try {
     const mongoose = require('mongoose');
+    const { uploadId } = req.query;
+
+    let match = { userId: new mongoose.Types.ObjectId(req.user.id) };
+    if (uploadId) match.uploadId = new mongoose.Types.ObjectId(uploadId);
 
     const opportunities = await Keyword.aggregate([
-      { $match: { userId: new mongoose.Types.ObjectId(req.user.id) } },
+      { $match: match },
       {
         $addFields: {
           opportunityScore: {
@@ -118,6 +139,19 @@ router.delete('/', auth, async (req, res) => {
   try {
     const result = await Keyword.deleteMany({ userId: req.user.id });
     return res.json({ message: `${result.deletedCount} keywords eliminadas.` });
+  } catch (error) {
+    return res.status(500).json({ message: 'Error del servidor' });
+  }
+});
+
+// GET /api/keywords/categories
+router.get('/categories', auth, async (req, res) => {
+  try {
+    const categories = await Keyword.distinct('category', {
+      userId: req.user.id,
+      category: { $ne: '' },
+    });
+    return res.json(categories);
   } catch (error) {
     return res.status(500).json({ message: 'Error del servidor' });
   }

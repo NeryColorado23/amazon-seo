@@ -2,11 +2,7 @@
   <div class="editor-header">
     <div class="header-left">
       <h1>Listing Editor</h1>
-      <input
-        class="draft-name-input"
-        [(ngModel)]="draftName"
-        placeholder="Nombre del borrador..."
-      />
+      <input class="draft-name-input" [(ngModel)]="draftName" placeholder="Nombre del borrador..." />
     </div>
     <div class="header-actions">
       <span class="saved-msg">{{ savedMessage }}</span>
@@ -26,8 +22,11 @@
 
   <!-- ══ EDITOR TAB ══ -->
   <div class="editor-layout" *ngIf="activeTab === 'editor'">
+
+    <!-- PANEL IZQUIERDO: Keywords -->
     <div class="keywords-panel">
       <h3>Keywords</h3>
+
       <div class="kw-filters">
         <div class="filter-row">
           <label>Categoría</label>
@@ -63,16 +62,39 @@
         </div>
       </div>
 
-      <div class="kw-count">{{ filteredKeywords.length }} keywords</div>
+      <!-- Contador con usadas -->
+      <div class="kw-count">
+        {{ filteredKeywords.length }} keywords ·
+        <span class="kw-used-count">{{ usedKeywordsInText.size }} usadas ✅</span>
+      </div>
 
+      <!-- Leyenda de colores -->
+      <div class="kw-legend">
+        <span class="legend-item" style="color:#dc2626">● +50k</span>
+        <span class="legend-item" style="color:#ea580c">● +20k</span>
+        <span class="legend-item" style="color:#2563eb">● +10k</span>
+        <span class="legend-item" style="color:#7c3aed">● +5k</span>
+        <span class="legend-item" style="color:#16a34a">● -5k</span>
+      </div>
+
+      <!-- Lista de keywords -->
       <div class="kw-list" *ngIf="!loadingKeywords">
-        <div class="kw-item" *ngFor="let kw of filteredKeywords" [class.selected]="isSelected(kw.keyword)">
+        <div
+          class="kw-item"
+          *ngFor="let kw of filteredKeywords"
+          [class.selected]="isSelected(kw.keyword)"
+          [class.in-text]="isKeywordInText(kw.keyword)"
+        >
           <div class="kw-main">
             <span class="kw-text" (click)="toggleKeyword(kw.keyword)">
-              <span class="kw-check">{{ isSelected(kw.keyword) ? '✅' : '○' }}</span>
+              <span class="kw-check">
+                {{ isKeywordInText(kw.keyword) ? '✅' : isSelected(kw.keyword) ? '☑️' : '○' }}
+              </span>
               {{ kw.keyword }}
             </span>
-            <span class="kw-vol">{{ kw.searchVolume | number }}</span>
+            <span class="kw-vol" [style.color]="getVolumeColor(kw.searchVolume)" [title]="getVolumeLabel(kw.searchVolume)">
+              {{ kw.searchVolume | number }}
+            </span>
           </div>
           <div class="kw-actions">
             <button class="kw-btn" (click)="addToField(kw.keyword, 'title')" title="Título">T</button>
@@ -87,15 +109,17 @@
       <div class="loading" *ngIf="loadingKeywords">Cargando keywords...</div>
 
       <div class="selected-kws" *ngIf="selectedKeywords.size > 0">
-        <h4>✅ Seleccionadas ({{ selectedKeywords.size }})</h4>
+        <h4>☑️ Seleccionadas ({{ selectedKeywords.size }})</h4>
         <div class="selected-tags">
           <span class="kw-tag" *ngFor="let kw of selectedKeywordsArray" (click)="toggleKeyword(kw)">{{ kw }} ✕</span>
         </div>
       </div>
     </div>
 
-    <!-- PANEL DERECHO -->
+    <!-- PANEL DERECHO: Listing fields -->
     <div class="listing-panel">
+
+      <!-- TÍTULO -->
       <div class="field-group">
         <div class="field-header">
           <label>Título</label>
@@ -103,12 +127,27 @@
             {{ charCount(title) }}/{{ limits.title }}
           </span>
         </div>
-        <textarea [(ngModel)]="title" rows="3"
-          placeholder="Incluye keywords principales, marca, características clave..."
-          [class.over-limit]="isOverLimit(title, limits.title)"></textarea>
+        <div class="highlight-wrapper">
+          <div class="highlight-display" [innerHTML]="highlightText(title)"></div>
+          <textarea
+            [(ngModel)]="title"
+            (ngModelChange)="onTextChange()"
+            rows="3"
+            placeholder="Incluye keywords principales, marca, características clave..."
+            [class.over-limit]="isOverLimit(title, limits.title)"
+          ></textarea>
+        </div>
         <div class="field-hint">Amazon permite hasta 200 bytes. Incluye las keywords de mayor volumen.</div>
+        <div class="vol-legend">
+          <span style="color:#dc2626">■ Muy alto (+50k)</span>
+          <span style="color:#ea580c">■ Alto (+20k)</span>
+          <span style="color:#2563eb">■ Medio (+10k)</span>
+          <span style="color:#7c3aed">■ Medio-bajo (+5k)</span>
+          <span style="color:#16a34a">■ Bajo (-5k)</span>
+        </div>
       </div>
 
+      <!-- BULLET POINTS -->
       <div class="field-group" *ngFor="let n of [1,2,3,4,5]">
         <div class="field-header">
           <label>Bullet Point #{{ n }}</label>
@@ -116,14 +155,21 @@
             {{ charCount(n===1?bullet1:n===2?bullet2:n===3?bullet3:n===4?bullet4:bullet5) }}/{{ limits.bullet }}
           </span>
         </div>
-        <textarea
-          [ngModel]="n===1?bullet1:n===2?bullet2:n===3?bullet3:n===4?bullet4:bullet5"
-          (ngModelChange)="n===1?bullet1=$event:n===2?bullet2=$event:n===3?bullet3=$event:n===4?bullet4=$event:bullet5=$event"
-          rows="2" [placeholder]="'Bullet '+n+': beneficio, característica o keyword importante...'"
-          [class.over-limit]="isOverLimit(n===1?bullet1:n===2?bullet2:n===3?bullet3:n===4?bullet4:bullet5, limits.bullet)">
-        </textarea>
+        <div class="highlight-wrapper">
+          <div class="highlight-display"
+            [innerHTML]="highlightText(n===1?bullet1:n===2?bullet2:n===3?bullet3:n===4?bullet4:bullet5)">
+          </div>
+          <textarea
+            [ngModel]="n===1?bullet1:n===2?bullet2:n===3?bullet3:n===4?bullet4:bullet5"
+            (ngModelChange)="n===1?bullet1=$event:n===2?bullet2=$event:n===3?bullet3=$event:n===4?bullet4=$event:bullet5=$event; onTextChange()"
+            rows="2"
+            [placeholder]="'Bullet '+n+': beneficio, característica o keyword importante...'"
+            [class.over-limit]="isOverLimit(n===1?bullet1:n===2?bullet2:n===3?bullet3:n===4?bullet4:bullet5, limits.bullet)"
+          ></textarea>
+        </div>
       </div>
 
+      <!-- DESCRIPCIÓN -->
       <div class="field-group">
         <div class="field-header">
           <label>Descripción</label>
@@ -131,11 +177,19 @@
             {{ charCount(description) }}/{{ limits.description }}
           </span>
         </div>
-        <textarea [(ngModel)]="description" rows="5"
-          placeholder="Descripción detallada del producto..."
-          [class.over-limit]="isOverLimit(description, limits.description)"></textarea>
+        <div class="highlight-wrapper">
+          <div class="highlight-display" [innerHTML]="highlightText(description)"></div>
+          <textarea
+            [(ngModel)]="description"
+            (ngModelChange)="onTextChange()"
+            rows="5"
+            placeholder="Descripción detallada del producto..."
+            [class.over-limit]="isOverLimit(description, limits.description)"
+          ></textarea>
+        </div>
       </div>
 
+      <!-- SEARCH TERMS -->
       <div class="field-group">
         <div class="field-header">
           <label>Search Terms (Backend)</label>
@@ -143,11 +197,19 @@
             {{ charCount(searchTerms) }}/{{ limits.searchTerms }}
           </span>
         </div>
-        <textarea [(ngModel)]="searchTerms" rows="3"
-          placeholder="Keywords separadas por espacios. No repetir las del título ni bullets..."
-          [class.over-limit]="isOverLimit(searchTerms, limits.searchTerms)"></textarea>
+        <div class="highlight-wrapper">
+          <div class="highlight-display" [innerHTML]="highlightText(searchTerms)"></div>
+          <textarea
+            [(ngModel)]="searchTerms"
+            (ngModelChange)="onTextChange()"
+            rows="3"
+            placeholder="Keywords separadas por espacios. No repetir las del título ni bullets..."
+            [class.over-limit]="isOverLimit(searchTerms, limits.searchTerms)"
+          ></textarea>
+        </div>
         <div class="field-hint">Máximo 250 bytes. No usar comas, no repetir keywords ya usadas.</div>
       </div>
+
     </div>
   </div>
 
@@ -155,7 +217,6 @@
   <div class="preview-container" *ngIf="activeTab === 'preview'">
     <div class="amazon-preview-page">
 
-      <!-- Barra superior -->
       <div class="amz-topbar">
         <div class="amz-logo">amazon</div>
         <div class="amz-search">
@@ -168,15 +229,11 @@
         </div>
       </div>
 
-      <!-- Breadcrumb -->
       <div class="amz-breadcrumb">
         Amazon › {{ kwFilters.category || 'All Categories' }} › Your Product
       </div>
 
-      <!-- Contenido principal -->
       <div class="amz-main">
-
-        <!-- Imágenes -->
         <div class="amz-images">
           <div class="amz-main-image">
             <div class="amz-img-placeholder">
@@ -189,28 +246,22 @@
           </div>
         </div>
 
-        <!-- Info del producto -->
         <div class="amz-product-info">
           <div class="amz-brand">Visit the <a>Your Brand Store</a></div>
-
           <h1 class="amz-title">
             {{ title || 'Tu título del producto aparecerá aquí. Incluye keywords principales, marca y características clave del producto.' }}
           </h1>
-
           <div class="amz-rating">
             <span class="amz-stars">★★★★☆</span>
             <span class="amz-reviews">4.2 · 1,247 ratings</span>
             <span class="amz-sep">|</span>
             <span class="amz-bsr">#128 in Your Category</span>
           </div>
-
           <div class="amz-divider-line"></div>
-
           <div class="amz-price-section">
             <span class="amz-price">$24.99</span>
             <span class="amz-price-sub">($12.50 / count)</span>
           </div>
-
           <div class="amz-bullets">
             <div class="amz-bullets-title">About this item</div>
             <ul>
@@ -219,12 +270,9 @@
               <li *ngIf="bullet3">{{ bullet3 }}</li>
               <li *ngIf="bullet4">{{ bullet4 }}</li>
               <li *ngIf="bullet5">{{ bullet5 }}</li>
-              <li *ngIf="!bullet1" class="amz-placeholder">
-                ✏️ Agrega bullet points en el editor para verlos aquí...
-              </li>
+              <li *ngIf="!bullet1" class="amz-placeholder">✏️ Agrega bullet points en el editor...</li>
             </ul>
           </div>
-
           <div class="amz-variants">
             <div class="amz-variant-label">Size:</div>
             <div class="amz-variant-options">
@@ -235,12 +283,9 @@
           </div>
         </div>
 
-        <!-- Buy Box -->
         <div class="amz-buybox">
           <div class="amz-price-box">$24.99</div>
-          <div class="amz-delivery">
-            <span>FREE delivery</span> <strong>Tomorrow</strong>
-          </div>
+          <div class="amz-delivery"><span>FREE delivery</span> <strong>Tomorrow</strong></div>
           <div class="amz-stock">In Stock</div>
           <div class="amz-qty">
             <label>Quantity:</label>
@@ -255,23 +300,20 @@
         </div>
       </div>
 
-      <!-- Descripción -->
       <div class="amz-description-section">
         <h2>Product Description</h2>
         <p class="amz-description-text">
-          {{ description || 'La descripción de tu producto aparecerá aquí. Incluye keywords secundarias, detalles, instrucciones y beneficios del producto.' }}
+          {{ description || 'La descripción de tu producto aparecerá aquí.' }}
         </p>
       </div>
 
-      <!-- Search Terms -->
       <div class="amz-search-terms-section">
         <h4>🔒 Search Terms — Solo visibles en el backend de Amazon Seller Central</h4>
         <div class="amz-search-terms-box">
-          {{ searchTerms || 'Tus search terms aparecerán aquí. No son visibles para los clientes, solo para el algoritmo A9 de Amazon.' }}
+          {{ searchTerms || 'Tus search terms aparecerán aquí.' }}
         </div>
       </div>
 
-      <!-- Keywords usadas -->
       <div class="amz-keywords-used" *ngIf="selectedKeywords.size > 0">
         <h4>✅ Keywords incluidas en este listing ({{ selectedKeywords.size }})</h4>
         <div class="amz-kw-tags">

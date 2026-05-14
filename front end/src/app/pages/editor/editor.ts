@@ -13,14 +13,12 @@ import { DraftService } from '../../services/draft';
   styleUrl: './editor.scss',
 })
 export class Editor implements OnInit {
-  // Keywords
   allKeywords: any[] = [];
   filteredKeywords: any[] = [];
   selectedKeywords: Set<string> = new Set();
   keywordCategories: string[] = [];
   keywordUploads: any[] = [];
 
-  // Filtros keywords
   kwFilters = {
     category: '',
     uploadId: '',
@@ -30,8 +28,6 @@ export class Editor implements OnInit {
     order: 'desc',
   };
 
-  // Listing fields
-  draftName = '';
   title = '';
   bullet1 = '';
   bullet2 = '';
@@ -41,7 +37,6 @@ export class Editor implements OnInit {
   description = '';
   searchTerms = '';
 
-  // Amazon limits
   limits = {
     title: 200,
     bullet: 100,
@@ -49,13 +44,16 @@ export class Editor implements OnInit {
     searchTerms: 250,
   };
 
-  // State
   activeTab: 'editor' | 'preview' | 'history' = 'editor';
   drafts: any[] = [];
   saving = false;
   savedMessage = '';
   currentDraftId = '';
   loadingKeywords = false;
+  draftName = '';
+
+  // Keywords encontradas en los textos
+  usedKeywordsInText: Set<string> = new Set();
 
   constructor(
     private keywordService: KeywordService,
@@ -100,6 +98,7 @@ export class Editor implements OnInit {
         this.allKeywords = data;
         this.filteredKeywords = data;
         this.loadingKeywords = false;
+        this.detectUsedKeywords();
       },
       error: () => { this.loadingKeywords = false; },
     });
@@ -111,7 +110,83 @@ export class Editor implements OnInit {
     });
   }
 
-  // Toggle keyword selection
+  // ── Detección de keywords en los textos ──────────────────────────────────
+
+  get allText(): string {
+    return [this.title, this.bullet1, this.bullet2, this.bullet3,
+            this.bullet4, this.bullet5, this.description, this.searchTerms]
+      .join(' ').toLowerCase();
+  }
+
+  detectUsedKeywords(): void {
+    const text = this.allText;
+    this.usedKeywordsInText = new Set(
+      this.filteredKeywords
+        .filter(kw => text.includes(kw.keyword.toLowerCase()))
+        .map(kw => kw.keyword.toLowerCase())
+    );
+  }
+
+  isKeywordInText(kw: string): boolean {
+    return this.usedKeywordsInText.has(kw.toLowerCase());
+  }
+
+  onTextChange(): void {
+    this.detectUsedKeywords();
+  }
+
+  // Colores por volumen de búsqueda
+  getVolumeColor(volume: number): string {
+    if (volume >= 50000) return '#dc2626';   // rojo — muy alto
+    if (volume >= 20000) return '#ea580c';   // naranja — alto
+    if (volume >= 10000) return '#2563eb';   // azul — intermedio
+    if (volume >= 5000)  return '#7c3aed';   // morado — medio-bajo
+    return '#16a34a';                         // verde — bajo
+  }
+
+  getVolumeLabel(volume: number): string {
+    if (volume >= 50000) return 'Muy alto';
+    if (volume >= 20000) return 'Alto';
+    if (volume >= 10000) return 'Medio';
+    if (volume >= 5000)  return 'Medio-bajo';
+    return 'Bajo';
+  }
+
+  // Renderizar texto con keywords resaltadas por color
+  highlightText(text: string): string {
+    if (!text || this.filteredKeywords.length === 0) return this.escapeHtml(text);
+
+    // Ordenar por longitud descendente para que frases largas tengan prioridad
+    const sorted = [...this.filteredKeywords].sort(
+      (a, b) => b.keyword.length - a.keyword.length
+    );
+
+    let result = this.escapeHtml(text);
+
+    sorted.forEach(kw => {
+      const escaped = this.escapeHtml(kw.keyword);
+      const color = this.getVolumeColor(kw.searchVolume);
+      const regex = new RegExp(`(${escaped})`, 'gi');
+      result = result.replace(
+        regex,
+        `<mark style="background:${color}20;color:${color};border-radius:3px;padding:1px 3px;font-weight:600;">$1</mark>`
+      );
+    });
+
+    return result;
+  }
+
+  escapeHtml(text: string): string {
+    if (!text) return '';
+    return text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  // ── Toggle y campos ──────────────────────────────────────────────────────
+
   toggleKeyword(kw: string): void {
     if (this.selectedKeywords.has(kw)) {
       this.selectedKeywords.delete(kw);
@@ -124,7 +199,6 @@ export class Editor implements OnInit {
     return this.selectedKeywords.has(kw);
   }
 
-  // Copy keyword to field
   addToField(kw: string, field: string): void {
     const currentVal = (this as any)[field] as string;
     const limit = field === 'title' ? this.limits.title
@@ -132,12 +206,11 @@ export class Editor implements OnInit {
       : field === 'searchTerms' ? this.limits.searchTerms
       : this.limits.bullet;
 
-    const separator = field === 'searchTerms' ? ' ' : ' ';
-    const newVal = currentVal ? `${currentVal}${separator}${kw}` : kw;
-
+    const newVal = currentVal ? `${currentVal} ${kw}` : kw;
     if (newVal.length <= limit) {
       (this as any)[field] = newVal;
       this.selectedKeywords.add(kw);
+      this.detectUsedKeywords();
     }
   }
 
@@ -145,12 +218,12 @@ export class Editor implements OnInit {
     return Array.from(this.selectedKeywords);
   }
 
-  // Char counters
   charCount(val: string): number { return val?.length || 0; }
   charLeft(val: string, limit: number): number { return limit - (val?.length || 0); }
   isOverLimit(val: string, limit: number): boolean { return (val?.length || 0) > limit; }
 
-  // Save draft
+  // ── Guardar/cargar borradores ────────────────────────────────────────────
+
   saveDraft(): void {
     this.saving = true;
     this.savedMessage = '';
@@ -188,7 +261,6 @@ export class Editor implements OnInit {
     });
   }
 
-  // Load draft into editor
   loadDraft(draft: any): void {
     this.currentDraftId = draft._id;
     this.draftName = draft.name;
@@ -202,9 +274,9 @@ export class Editor implements OnInit {
     this.searchTerms = draft.searchTerms;
     this.selectedKeywords = new Set(draft.keywordsUsed || []);
     this.activeTab = 'editor';
+    this.detectUsedKeywords();
   }
 
-  // New draft
   newDraft(): void {
     this.currentDraftId = '';
     this.draftName = '';
@@ -217,10 +289,10 @@ export class Editor implements OnInit {
     this.description = '';
     this.searchTerms = '';
     this.selectedKeywords = new Set();
+    this.usedKeywordsInText = new Set();
     this.activeTab = 'editor';
   }
 
-  // Delete draft
   deleteDraft(id: string): void {
     if (confirm('¿Eliminar este borrador?')) {
       this.draftService.deleteDraft(id).subscribe({

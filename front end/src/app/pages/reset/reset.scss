@@ -1,0 +1,36 @@
+.auth-page {
+  display: flex; align-items: center; justify-content: center;
+  min-height: 100vh; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+}
+.auth-card {
+  background: #fff; border-radius: 16px; padding: 40px;
+  width: 100%; max-width: 420px; box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+}
+.auth-header {
+  text-align: center; margin-bottom: 24px;
+  .auth-logo { font-size: 36px; display: block; margin-bottom: 12px; }
+  h1 { font-size: 22px; color: #1a1a2e; }
+}
+.step-desc { color: #888; font-size: 14px; margin-bottom: 20px; text-align: center; }
+.question-box {
+  background: #f0f4ff; border-radius: 10px; padding: 16px;
+  margin-bottom: 20px; border-left: 4px solid #1a73e8;
+  .question-label { font-size: 12px; color: #888; margin-bottom: 4px; }
+  .question-text { font-size: 15px; font-weight: 600; color: #1a1a2e; }
+}
+.btn-full { width: 100%; margin-top: 8px; padding: 12px; font-size: 15px; }
+.btn-back {
+  background: none; border: none; color: #888; cursor: pointer;
+  font-size: 13px; margin-top: 12px; display: block; text-align: center;
+  width: 100%; &:hover { color: #1a73e8; }
+}
+.success-state {
+  text-align: center; padding: 20px 0;
+  .success-icon { font-size: 48px; display: block; margin-bottom: 16px; }
+  h2 { color: #28a745; margin-bottom: 8px; }
+  p { color: #666; font-size: 14px; margin-bottom: 24px; }
+}
+.auth-footer {
+  text-align: center; margin-top: 20px; font-size: 14px;
+  a { color: #1a73e8; &:hover { text-decoration: underline; } }
+}

@@ -1,68 +1,127 @@
 const express = require('express');
-const Upload = require('../models/Upload');
-const Listing = require('../models/Listing');
-const Keyword = require('../models/Keyword');
+const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
+const User = require('../models/User');
 const auth = require('../middleware/auth');
 
 const router = express.Router();
 
-// GET /api/uploads
-router.get('/', auth, async (req, res) => {
+// POST /api/auth/register
+router.post('/register', async (req, res) => {
   try {
-    const uploads = await Upload.find({ userId: req.user.id }).sort({ uploadedAt: -1 });
-    return res.json(uploads);
-  } catch (error) {
-    return res.status(500).json({ message: 'Error del servidor', error: error.message });
-  }
-});
+    const { name, email, password, company, securityQuestion, securityAnswer } = req.body;
 
-// DELETE /api/uploads/:id — borrar upload y sus datos
-router.delete('/:id', auth, async (req, res) => {
-  try {
-    const upload = await Upload.findOne({ _id: req.params.id, userId: req.user.id });
-
-    if (!upload) {
-      return res.status(404).json({ message: 'Upload no encontrado.' });
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ message: 'El email ya está registrado.' });
     }
 
-    if (upload.type === 'listings') {
-      const deleted = await Listing.deleteMany({ uploadId: upload._id });
-      console.log(`Listings eliminados: ${deleted.deletedCount}`);
-    } else if (upload.type === 'keywords') {
-      const deleted = await Keyword.deleteMany({ uploadId: upload._id });
-      console.log(`Keywords eliminadas: ${deleted.deletedCount}`);
-    }
+    const user = new User({
+      name, email, password, company,
+      securityQuestion: securityQuestion || '',
+      securityAnswer: securityAnswer || '',
+    });
+    await user.save();
 
-    await Upload.findByIdAndDelete(upload._id);
+    const token = jwt.sign(
+      { id: user._id, email: user.email },
+      process.env.JWT_SECRET,
+      { expiresIn: '7d' }
+    );
 
-    return res.json({
-      message: `Reporte eliminado con ${upload.recordCount} registros.`,
-      type: upload.type,
+    return res.status(201).json({
+      token,
+      user: { id: user._id, name: user.name, email: user.email, company: user.company },
     });
   } catch (error) {
     return res.status(500).json({ message: 'Error del servidor', error: error.message });
   }
 });
 
-// DELETE /api/uploads/all/listings — borrar todos los uploads de listings
-router.delete('/all/listings', auth, async (req, res) => {
+// POST /api/auth/login
+router.post('/login', async (req, res) => {
   try {
-    await Listing.deleteMany({ userId: req.user.id });
-    await Upload.deleteMany({ userId: req.user.id, type: 'listings' });
-    return res.json({ message: 'Todos los listados eliminados.' });
+    const { email, password } = req.body;
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(400).json({ message: 'Credenciales incorrectas.' });
+    }
+
+    const isMatch = await user.comparePassword(password);
+    if (!isMatch) {
+      return res.status(400).json({ message: 'Credenciales incorrectas.' });
+    }
+
+    const token = jwt.sign(
+      { id: user._id, email: user.email },
+      process.env.JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    return res.json({
+      token,
+      user: { id: user._id, name: user.name, email: user.email, company: user.company },
+    });
   } catch (error) {
     return res.status(500).json({ message: 'Error del servidor', error: error.message });
   }
 });
 
-// DELETE /api/uploads/all/keywords — borrar todos los uploads de keywords
-router.delete('/all/keywords', auth, async (req, res) => {
+// POST /api/auth/get-question — obtener pregunta secreta del usuario
+router.post('/get-question', async (req, res) => {
   try {
-    await Keyword.deleteMany({ userId: req.user.id });
-    await Upload.deleteMany({ userId: req.user.id, type: 'keywords' });
-    return res.json({ message: 'Todos las keywords eliminadas.' });
+    const { email } = req.body;
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return res.status(404).json({ message: 'No existe una cuenta con ese email.' });
+    }
+    if (!user.securityQuestion) {
+      return res.status(400).json({ message: 'Esta cuenta no tiene pregunta de seguridad configurada.' });
+    }
+
+    return res.json({ question: user.securityQuestion });
+  } catch (error) {
+    return res.status(500).json({ message: 'Error del servidor' });
+  }
+});
+
+// POST /api/auth/reset-password — resetear contraseña con respuesta secreta
+router.post('/reset-password', async (req, res) => {
+  try {
+    const { email, securityAnswer, newPassword } = req.body;
+
+    if (!newPassword || newPassword.length < 6) {
+      return res.status(400).json({ message: 'La nueva contraseña debe tener al menos 6 caracteres.' });
+    }
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ message: 'No existe una cuenta con ese email.' });
+    }
+
+    const isMatch = await user.compareAnswer(securityAnswer);
+    if (!isMatch) {
+      return res.status(400).json({ message: 'Respuesta incorrecta.' });
+    }
+
+    user.password = newPassword;
+    await user.save();
+
+    return res.json({ message: '✅ Contraseña actualizada correctamente. Ya puedes iniciar sesión.' });
   } catch (error) {
     return res.status(500).json({ message: 'Error del servidor', error: error.message });
+  }
+});
+
+// GET /api/auth/me
+router.get('/me', auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select('-password -securityAnswer');
+    return res.json(user);
+  } catch (error) {
+    return res.status(500).json({ message: 'Error del servidor' });
   }
 });
 

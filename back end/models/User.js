@@ -6,17 +6,28 @@ const userSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true, lowercase: true, trim: true },
   password: { type: String, required: true, minlength: 6 },
   company: { type: String, default: '' },
+  securityQuestion: { type: String, default: '' },
+  securityAnswer: { type: String, default: '' },
   createdAt: { type: Date, default: Date.now },
 });
 
 userSchema.pre('save', async function () {
-  if (!this.isModified('password')) return;
-  const salt = await bcrypt.genSalt(10);
-  this.password = await bcrypt.hash(this.password, salt);
+  if (this.isModified('password')) {
+    const salt = await bcrypt.genSalt(10);
+    this.password = await bcrypt.hash(this.password, salt);
+  }
+  if (this.isModified('securityAnswer') && this.securityAnswer) {
+    const salt = await bcrypt.genSalt(10);
+    this.securityAnswer = await bcrypt.hash(this.securityAnswer.toLowerCase().trim(), salt);
+  }
 });
 
 userSchema.methods.comparePassword = async function (candidatePassword) {
   return bcrypt.compare(candidatePassword, this.password);
+};
+
+userSchema.methods.compareAnswer = async function (candidateAnswer) {
+  return bcrypt.compare(candidateAnswer.toLowerCase().trim(), this.securityAnswer);
 };
 
 module.exports = mongoose.model('User', userSchema);

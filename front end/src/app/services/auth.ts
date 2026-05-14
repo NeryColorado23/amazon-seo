@@ -20,7 +20,10 @@ export class AuthService {
     if (user) this.currentUserSubject.next(JSON.parse(user));
   }
 
-  register(data: { name: string; email: string; password: string; company?: string }): Observable<AuthResponse> {
+  register(data: {
+    name: string; email: string; password: string;
+    company?: string; securityQuestion?: string; securityAnswer?: string;
+  }): Observable<AuthResponse> {
     return this.http.post<AuthResponse>(`${this.apiUrl}/auth/register`, data).pipe(
       tap((res) => this.handleAuth(res))
     );
@@ -32,6 +35,14 @@ export class AuthService {
     );
   }
 
+  getQuestion(email: string): Observable<{ question: string }> {
+    return this.http.post<{ question: string }>(`${this.apiUrl}/auth/get-question`, { email });
+  }
+
+  resetPassword(data: { email: string; securityAnswer: string; newPassword: string }): Observable<any> {
+    return this.http.post(`${this.apiUrl}/auth/reset-password`, data);
+  }
+
   logout(): void {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
@@ -39,13 +50,8 @@ export class AuthService {
     this.router.navigate(['/login']);
   }
 
-  getToken(): string | null {
-    return localStorage.getItem('token');
-  }
-
-  isLoggedIn(): boolean {
-    return !!this.getToken();
-  }
+  getToken(): string | null { return localStorage.getItem('token'); }
+  isLoggedIn(): boolean { return !!this.getToken(); }
 
   private handleAuth(res: AuthResponse): void {
     localStorage.setItem('token', res.token);

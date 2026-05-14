@@ -26,12 +26,8 @@
 
   <!-- ══ EDITOR TAB ══ -->
   <div class="editor-layout" *ngIf="activeTab === 'editor'">
-
-    <!-- PANEL IZQUIERDO: Keywords -->
     <div class="keywords-panel">
       <h3>Keywords</h3>
-
-      <!-- Filtros -->
       <div class="kw-filters">
         <div class="filter-row">
           <label>Categoría</label>
@@ -40,7 +36,6 @@
             <option *ngFor="let cat of keywordCategories" [value]="cat">{{ cat }}</option>
           </select>
         </div>
-
         <div class="filter-row">
           <label>Archivo</label>
           <select [(ngModel)]="kwFilters.uploadId" (change)="applyFilters()">
@@ -50,17 +45,14 @@
             </option>
           </select>
         </div>
-
         <div class="filter-row">
           <label>Volumen mín.</label>
           <input type="number" [(ngModel)]="kwFilters.minVolume" (input)="applyFilters()" placeholder="0" />
         </div>
-
         <div class="filter-row">
           <label>Competidores máx.</label>
           <input type="number" [(ngModel)]="kwFilters.maxCompetitors" (input)="applyFilters()" placeholder="Todos" />
         </div>
-
         <div class="filter-row">
           <label>Ordenar por</label>
           <select [(ngModel)]="kwFilters.sortBy" (change)="applyFilters()">
@@ -71,15 +63,10 @@
         </div>
       </div>
 
-      <!-- Lista de keywords -->
       <div class="kw-count">{{ filteredKeywords.length }} keywords</div>
 
       <div class="kw-list" *ngIf="!loadingKeywords">
-        <div
-          class="kw-item"
-          *ngFor="let kw of filteredKeywords"
-          [class.selected]="isSelected(kw.keyword)"
-        >
+        <div class="kw-item" *ngFor="let kw of filteredKeywords" [class.selected]="isSelected(kw.keyword)">
           <div class="kw-main">
             <span class="kw-text" (click)="toggleKeyword(kw.keyword)">
               <span class="kw-check">{{ isSelected(kw.keyword) ? '✅' : '○' }}</span>
@@ -88,7 +75,7 @@
             <span class="kw-vol">{{ kw.searchVolume | number }}</span>
           </div>
           <div class="kw-actions">
-            <button class="kw-btn" (click)="addToField(kw.keyword, 'title')" title="Agregar al título">T</button>
+            <button class="kw-btn" (click)="addToField(kw.keyword, 'title')" title="Título">T</button>
             <button class="kw-btn" (click)="addToField(kw.keyword, 'bullet1')" title="Bullet 1">B1</button>
             <button class="kw-btn" (click)="addToField(kw.keyword, 'bullet2')" title="Bullet 2">B2</button>
             <button class="kw-btn" (click)="addToField(kw.keyword, 'bullet3')" title="Bullet 3">B3</button>
@@ -99,23 +86,16 @@
 
       <div class="loading" *ngIf="loadingKeywords">Cargando keywords...</div>
 
-      <!-- Keywords seleccionadas -->
       <div class="selected-kws" *ngIf="selectedKeywords.size > 0">
         <h4>✅ Seleccionadas ({{ selectedKeywords.size }})</h4>
         <div class="selected-tags">
-          <span
-            class="kw-tag"
-            *ngFor="let kw of selectedKeywordsArray"
-            (click)="toggleKeyword(kw)"
-          >{{ kw }} ✕</span>
+          <span class="kw-tag" *ngFor="let kw of selectedKeywordsArray" (click)="toggleKeyword(kw)">{{ kw }} ✕</span>
         </div>
       </div>
     </div>
 
-    <!-- PANEL DERECHO: Listing fields -->
+    <!-- PANEL DERECHO -->
     <div class="listing-panel">
-
-      <!-- TÍTULO -->
       <div class="field-group">
         <div class="field-header">
           <label>Título</label>
@@ -123,33 +103,27 @@
             {{ charCount(title) }}/{{ limits.title }}
           </span>
         </div>
-        <textarea
-          [(ngModel)]="title"
-          rows="3"
+        <textarea [(ngModel)]="title" rows="3"
           placeholder="Incluye keywords principales, marca, características clave..."
-          [class.over-limit]="isOverLimit(title, limits.title)"
-        ></textarea>
+          [class.over-limit]="isOverLimit(title, limits.title)"></textarea>
         <div class="field-hint">Amazon permite hasta 200 bytes. Incluye las keywords de mayor volumen.</div>
       </div>
 
-      <!-- BULLET POINTS -->
       <div class="field-group" *ngFor="let n of [1,2,3,4,5]">
         <div class="field-header">
           <label>Bullet Point #{{ n }}</label>
-          <span class="char-counter" [class.over]="isOverLimit(n === 1 ? bullet1 : n === 2 ? bullet2 : n === 3 ? bullet3 : n === 4 ? bullet4 : bullet5, limits.bullet)">
-            {{ charCount(n === 1 ? bullet1 : n === 2 ? bullet2 : n === 3 ? bullet3 : n === 4 ? bullet4 : bullet5) }}/{{ limits.bullet }}
+          <span class="char-counter" [class.over]="isOverLimit(n===1?bullet1:n===2?bullet2:n===3?bullet3:n===4?bullet4:bullet5, limits.bullet)">
+            {{ charCount(n===1?bullet1:n===2?bullet2:n===3?bullet3:n===4?bullet4:bullet5) }}/{{ limits.bullet }}
           </span>
         </div>
         <textarea
-          [ngModel]="n === 1 ? bullet1 : n === 2 ? bullet2 : n === 3 ? bullet3 : n === 4 ? bullet4 : bullet5"
-          (ngModelChange)="n === 1 ? bullet1 = $event : n === 2 ? bullet2 = $event : n === 3 ? bullet3 = $event : n === 4 ? bullet4 = $event : bullet5 = $event"
-          rows="2"
-          [placeholder]="'Bullet ' + n + ': beneficio, característica o keyword importante...'"
-          [class.over-limit]="isOverLimit(n === 1 ? bullet1 : n === 2 ? bullet2 : n === 3 ? bullet3 : n === 4 ? bullet4 : bullet5, limits.bullet)"
-        ></textarea>
+          [ngModel]="n===1?bullet1:n===2?bullet2:n===3?bullet3:n===4?bullet4:bullet5"
+          (ngModelChange)="n===1?bullet1=$event:n===2?bullet2=$event:n===3?bullet3=$event:n===4?bullet4=$event:bullet5=$event"
+          rows="2" [placeholder]="'Bullet '+n+': beneficio, característica o keyword importante...'"
+          [class.over-limit]="isOverLimit(n===1?bullet1:n===2?bullet2:n===3?bullet3:n===4?bullet4:bullet5, limits.bullet)">
+        </textarea>
       </div>
 
-      <!-- DESCRIPCIÓN -->
       <div class="field-group">
         <div class="field-header">
           <label>Descripción</label>
@@ -157,15 +131,11 @@
             {{ charCount(description) }}/{{ limits.description }}
           </span>
         </div>
-        <textarea
-          [(ngModel)]="description"
-          rows="5"
-          placeholder="Descripción detallada del producto. Puedes incluir keywords secundarias aquí..."
-          [class.over-limit]="isOverLimit(description, limits.description)"
-        ></textarea>
+        <textarea [(ngModel)]="description" rows="5"
+          placeholder="Descripción detallada del producto..."
+          [class.over-limit]="isOverLimit(description, limits.description)"></textarea>
       </div>
 
-      <!-- SEARCH TERMS -->
       <div class="field-group">
         <div class="field-header">
           <label>Search Terms (Backend)</label>
@@ -173,61 +143,142 @@
             {{ charCount(searchTerms) }}/{{ limits.searchTerms }}
           </span>
         </div>
-        <textarea
-          [(ngModel)]="searchTerms"
-          rows="3"
+        <textarea [(ngModel)]="searchTerms" rows="3"
           placeholder="Keywords separadas por espacios. No repetir las del título ni bullets..."
-          [class.over-limit]="isOverLimit(searchTerms, limits.searchTerms)"
-        ></textarea>
+          [class.over-limit]="isOverLimit(searchTerms, limits.searchTerms)"></textarea>
         <div class="field-hint">Máximo 250 bytes. No usar comas, no repetir keywords ya usadas.</div>
       </div>
-
     </div>
   </div>
 
   <!-- ══ PREVIEW TAB ══ -->
   <div class="preview-container" *ngIf="activeTab === 'preview'">
-    <div class="amazon-preview">
-      <div class="preview-header">
-        <span class="preview-badge">Vista previa Amazon</span>
+    <div class="amazon-preview-page">
+
+      <!-- Barra superior -->
+      <div class="amz-topbar">
+        <div class="amz-logo">amazon</div>
+        <div class="amz-search">
+          <input type="text" placeholder="Search Amazon" disabled />
+          <button>🔍</button>
+        </div>
+        <div class="amz-nav-right">
+          <span>Returns<br><strong>&amp; Orders</strong></span>
+          <span>🛒 Cart</span>
+        </div>
       </div>
 
-      <!-- Título -->
-      <div class="preview-title">
-        {{ title || 'Tu título aparecerá aquí...' }}
+      <!-- Breadcrumb -->
+      <div class="amz-breadcrumb">
+        Amazon › {{ kwFilters.category || 'All Categories' }} › Your Product
       </div>
 
-      <!-- Bullets -->
-      <div class="preview-bullets">
-        <ul>
-          <li *ngIf="bullet1">{{ bullet1 }}</li>
-          <li *ngIf="bullet2">{{ bullet2 }}</li>
-          <li *ngIf="bullet3">{{ bullet3 }}</li>
-          <li *ngIf="bullet4">{{ bullet4 }}</li>
-          <li *ngIf="bullet5">{{ bullet5 }}</li>
-          <li *ngIf="!bullet1 && !bullet2" class="placeholder-text">Los bullet points aparecerán aquí...</li>
-        </ul>
+      <!-- Contenido principal -->
+      <div class="amz-main">
+
+        <!-- Imágenes -->
+        <div class="amz-images">
+          <div class="amz-main-image">
+            <div class="amz-img-placeholder">
+              <span>🖼️</span>
+              <p>Imagen principal<br>del producto</p>
+            </div>
+          </div>
+          <div class="amz-thumbnails">
+            <div class="amz-thumb" *ngFor="let i of [1,2,3,4,5,6]">📷</div>
+          </div>
+        </div>
+
+        <!-- Info del producto -->
+        <div class="amz-product-info">
+          <div class="amz-brand">Visit the <a>Your Brand Store</a></div>
+
+          <h1 class="amz-title">
+            {{ title || 'Tu título del producto aparecerá aquí. Incluye keywords principales, marca y características clave del producto.' }}
+          </h1>
+
+          <div class="amz-rating">
+            <span class="amz-stars">★★★★☆</span>
+            <span class="amz-reviews">4.2 · 1,247 ratings</span>
+            <span class="amz-sep">|</span>
+            <span class="amz-bsr">#128 in Your Category</span>
+          </div>
+
+          <div class="amz-divider-line"></div>
+
+          <div class="amz-price-section">
+            <span class="amz-price">$24.99</span>
+            <span class="amz-price-sub">($12.50 / count)</span>
+          </div>
+
+          <div class="amz-bullets">
+            <div class="amz-bullets-title">About this item</div>
+            <ul>
+              <li *ngIf="bullet1">{{ bullet1 }}</li>
+              <li *ngIf="bullet2">{{ bullet2 }}</li>
+              <li *ngIf="bullet3">{{ bullet3 }}</li>
+              <li *ngIf="bullet4">{{ bullet4 }}</li>
+              <li *ngIf="bullet5">{{ bullet5 }}</li>
+              <li *ngIf="!bullet1" class="amz-placeholder">
+                ✏️ Agrega bullet points en el editor para verlos aquí...
+              </li>
+            </ul>
+          </div>
+
+          <div class="amz-variants">
+            <div class="amz-variant-label">Size:</div>
+            <div class="amz-variant-options">
+              <span class="amz-variant-btn selected">Pack of 1</span>
+              <span class="amz-variant-btn">Pack of 2</span>
+              <span class="amz-variant-btn">Pack of 3</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Buy Box -->
+        <div class="amz-buybox">
+          <div class="amz-price-box">$24.99</div>
+          <div class="amz-delivery">
+            <span>FREE delivery</span> <strong>Tomorrow</strong>
+          </div>
+          <div class="amz-stock">In Stock</div>
+          <div class="amz-qty">
+            <label>Quantity:</label>
+            <select disabled><option>1</option></select>
+          </div>
+          <button class="amz-btn-cart">Add to Cart</button>
+          <button class="amz-btn-buy">Buy Now</button>
+          <div class="amz-sold-by">
+            <span>Ships from</span> <strong>Amazon</strong><br>
+            <span>Sold by</span> <strong>Your Store</strong>
+          </div>
+        </div>
       </div>
 
       <!-- Descripción -->
-      <div class="preview-section">
-        <h4>Descripción del producto</h4>
-        <p class="preview-description">{{ description || 'La descripción aparecerá aquí...' }}</p>
+      <div class="amz-description-section">
+        <h2>Product Description</h2>
+        <p class="amz-description-text">
+          {{ description || 'La descripción de tu producto aparecerá aquí. Incluye keywords secundarias, detalles, instrucciones y beneficios del producto.' }}
+        </p>
       </div>
 
       <!-- Search Terms -->
-      <div class="preview-section preview-backend">
-        <h4>🔒 Search Terms (solo visible en backend de Amazon)</h4>
-        <p class="preview-search-terms">{{ searchTerms || 'Los search terms aparecerán aquí...' }}</p>
+      <div class="amz-search-terms-section">
+        <h4>🔒 Search Terms — Solo visibles en el backend de Amazon Seller Central</h4>
+        <div class="amz-search-terms-box">
+          {{ searchTerms || 'Tus search terms aparecerán aquí. No son visibles para los clientes, solo para el algoritmo A9 de Amazon.' }}
+        </div>
       </div>
 
       <!-- Keywords usadas -->
-      <div class="preview-section" *ngIf="selectedKeywords.size > 0">
-        <h4>✅ Keywords incluidas ({{ selectedKeywords.size }})</h4>
-        <div class="preview-tags">
-          <span class="preview-tag" *ngFor="let kw of selectedKeywordsArray">{{ kw }}</span>
+      <div class="amz-keywords-used" *ngIf="selectedKeywords.size > 0">
+        <h4>✅ Keywords incluidas en este listing ({{ selectedKeywords.size }})</h4>
+        <div class="amz-kw-tags">
+          <span class="amz-kw-tag" *ngFor="let kw of selectedKeywordsArray">{{ kw }}</span>
         </div>
       </div>
+
     </div>
   </div>
 
@@ -244,9 +295,7 @@
           <strong>{{ draft.name }}</strong>
           <span class="draft-category" *ngIf="draft.category">📁 {{ draft.category }}</span>
           <span class="draft-date">🕐 {{ formatDate(draft.savedAt) }}</span>
-          <span class="draft-kws" *ngIf="draft.keywordsUsed?.length > 0">
-            🔑 {{ draft.keywordsUsed.length }} keywords usadas
-          </span>
+          <span class="draft-kws" *ngIf="draft.keywordsUsed?.length > 0">🔑 {{ draft.keywordsUsed.length }} keywords usadas</span>
           <div class="draft-preview-text" *ngIf="draft.title">{{ draft.title | slice:0:80 }}...</div>
         </div>
         <div class="draft-actions">

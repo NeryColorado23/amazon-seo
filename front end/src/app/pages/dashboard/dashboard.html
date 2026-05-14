@@ -93,7 +93,7 @@
     <p class="error-msg" *ngIf="uploadError">❌ {{ uploadError }}</p>
   </div>
 
-  <!-- ── FILTROS ── -->
+<!-- ── FILTROS ── -->
   <div class="filters-bar" *ngIf="listings.length > 0">
     <div class="filter-group">
       <label>Categoría</label>
@@ -122,8 +122,9 @@
         <option value="asc">Menor a mayor</option>
       </select>
     </div>
+    <button class="btn btn-danger" (click)="deleteAll()">🗑️ Borrar todo</button>
   </div>
-
+  
   <!-- ── TABLA ── -->
   <div class="card" *ngIf="filteredListings.length > 0">
     <h2 class="section-title">Listados ({{ filteredListings.length }} resultados)</h2>

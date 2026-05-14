@@ -1,87 +1,69 @@
 const express = require('express');
-const jwt = require('jsonwebtoken');
-const User = require('../models/User');
+const Upload = require('../models/Upload');
+const Listing = require('../models/Listing');
+const Keyword = require('../models/Keyword');
 const auth = require('../middleware/auth');
 
 const router = express.Router();
 
-// POST /api/auth/register
-router.post('/register', async (req, res) => {
+// GET /api/uploads
+router.get('/', auth, async (req, res) => {
   try {
-    const { name, email, password, company } = req.body;
-
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      return res.status(400).json({ message: 'El email ya está registrado.' });
-    }
-
-    const user = new User({ name, email, password, company });
-    await user.save();
-
-    const token = jwt.sign(
-      { id: user._id, email: user.email },
-      process.env.JWT_SECRET,
-      { expiresIn: '7d' }
-    );
-
-    return res.status(201).json({
-      token,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        company: user.company,
-      },
-    });
+    const uploads = await Upload.find({ userId: req.user.id }).sort({ uploadedAt: -1 });
+    return res.json(uploads);
   } catch (error) {
     return res.status(500).json({ message: 'Error del servidor', error: error.message });
   }
 });
 
-// POST /api/auth/login
-router.post('/login', async (req, res) => {
+// DELETE /api/uploads/:id — borrar upload y sus datos
+router.delete('/:id', auth, async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const upload = await Upload.findOne({ _id: req.params.id, userId: req.user.id });
 
-    const user = await User.findOne({ email });
-    if (!user) {
-      return res.status(400).json({ message: 'Credenciales incorrectas.' });
+    if (!upload) {
+      return res.status(404).json({ message: 'Upload no encontrado.' });
     }
 
-    const isMatch = await user.comparePassword(password);
-    if (!isMatch) {
-      return res.status(400).json({ message: 'Credenciales incorrectas.' });
+    if (upload.type === 'listings') {
+      const deleted = await Listing.deleteMany({ uploadId: upload._id });
+      console.log(`Listings eliminados: ${deleted.deletedCount}`);
+    } else if (upload.type === 'keywords') {
+      const deleted = await Keyword.deleteMany({ uploadId: upload._id });
+      console.log(`Keywords eliminadas: ${deleted.deletedCount}`);
     }
 
-    const token = jwt.sign(
-      { id: user._id, email: user.email },
-      process.env.JWT_SECRET,
-      { expiresIn: '7d' }
-    );
+    await Upload.findByIdAndDelete(upload._id);
 
     return res.json({
-      token,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        company: user.company,
-      },
+      message: `Reporte eliminado con ${upload.recordCount} registros.`,
+      type: upload.type,
     });
   } catch (error) {
     return res.status(500).json({ message: 'Error del servidor', error: error.message });
   }
 });
 
-// GET /api/auth/me
-router.get('/me', auth, async (req, res) => {
+// DELETE /api/uploads/all/listings — borrar todos los uploads de listings
+router.delete('/all/listings', auth, async (req, res) => {
   try {
-    const user = await User.findById(req.user.id).select('-password');
-    return res.json(user);
+    await Listing.deleteMany({ userId: req.user.id });
+    await Upload.deleteMany({ userId: req.user.id, type: 'listings' });
+    return res.json({ message: 'Todos los listados eliminados.' });
   } catch (error) {
-  console.log('ERROR COMPLETO:', error);
-  return res.status(500).json({ message: 'Error del servidor', error: error.message });
-}
+    return res.status(500).json({ message: 'Error del servidor', error: error.message });
+  }
+});
+
+// DELETE /api/uploads/all/keywords — borrar todos los uploads de keywords
+router.delete('/all/keywords', auth, async (req, res) => {
+  try {
+    await Keyword.deleteMany({ userId: req.user.id });
+    await Upload.deleteMany({ userId: req.user.id, type: 'keywords' });
+    return res.json({ message: 'Todos las keywords eliminadas.' });
+  } catch (error) {
+    return res.status(500).json({ message: 'Error del servidor', error: error.message });
+  }
 });
 
 module.exports = router;

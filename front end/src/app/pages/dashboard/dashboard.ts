@@ -34,7 +34,7 @@ export class Dashboard implements OnInit {
 
   constructor(
     private listingService: ListingService,
-    private uploadService: UploadService
+    private uploadService: UploadService,
   ) {}
 
   ngOnInit(): void {
@@ -65,9 +65,7 @@ export class Dashboard implements OnInit {
       next: (cats) => (this.categories = cats),
     });
 
-    this.listingService.getStats(
-      this.filters.category || undefined
-    ).subscribe({
+    this.listingService.getStats(this.filters.category || undefined).subscribe({
       next: (data) => {
         this.stats = data.totals;
         this.categoryStats = data.byCategory;
@@ -104,11 +102,26 @@ export class Dashboard implements OnInit {
     if (confirm(`¿Eliminar "${upload.fileName}" y sus ${upload.recordCount} registros?`)) {
       this.uploadService.deleteUpload(upload._id).subscribe({
         next: () => {
-          if (this.selectedUploadId === upload._id) {
-            this.selectedUploadId = '';
-          }
+          if (this.selectedUploadId === upload._id) this.selectedUploadId = '';
           this.loadUploads();
           this.loadData();
+        },
+      });
+    }
+  }
+
+  deleteAll(): void {
+    if (confirm('¿Eliminar TODOS los listados y reportes? Esta acción no se puede deshacer.')) {
+      this.uploadService.deleteAllListings().subscribe({
+        next: () => {
+          this.listings = [];
+          this.filteredListings = [];
+          this.uploads = [];
+          this.categories = [];
+          this.stats = null;
+          this.categoryStats = [];
+          this.selectedUploadId = '';
+          this.uploadMessage = '';
         },
       });
     }
@@ -135,31 +148,16 @@ export class Dashboard implements OnInit {
   }
 
   formatDate(dateStr: string): string {
-    const d = new Date(dateStr);
-    return d.toLocaleDateString('es-GT', {
+    return new Date(dateStr).toLocaleDateString('es-GT', {
       day: '2-digit', month: 'short', year: 'numeric',
       hour: '2-digit', minute: '2-digit',
     });
   }
 
-  get avgConversion(): string {
-    return this.stats?.avgConversionRate?.toFixed(2) || '0';
-  }
-  get avgSales(): string {
-    return this.stats?.avgSalesPerDay?.toFixed(1) || '0';
-  }
-  get totalImpressions(): string {
-    return this.stats?.totalImpressions?.toLocaleString() || '0';
-  }
-  get avgPrice(): string {
-    return this.stats?.avgPrice ? '$' + this.stats.avgPrice.toFixed(2) : '$0';
-  }
-  get totalSales(): string {
-    return this.stats?.totalOrderedProductSales
-      ? '$' + this.stats.totalOrderedProductSales.toLocaleString()
-      : '$0';
-  }
-  get totalUnits(): string {
-    return this.stats?.totalUnitsOrdered?.toLocaleString() || '0';
-  }
+  get avgConversion(): string { return this.stats?.avgConversionRate?.toFixed(2) || '0'; }
+  get avgSales(): string { return this.stats?.avgSalesPerDay?.toFixed(1) || '0'; }
+  get totalImpressions(): string { return this.stats?.totalImpressions?.toLocaleString() || '0'; }
+  get avgPrice(): string { return this.stats?.avgPrice ? '$' + this.stats.avgPrice.toFixed(2) : '$0'; }
+  get totalSales(): string { return this.stats?.totalOrderedProductSales ? '$' + this.stats.totalOrderedProductSales.toLocaleString() : '$0'; }
+  get totalUnits(): string { return this.stats?.totalUnitsOrdered?.toLocaleString() || '0'; }
 }

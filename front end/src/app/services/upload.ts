@@ -21,4 +21,12 @@ export class UploadService {
   deleteUpload(id: string): Observable<any> {
     return this.http.delete(`${this.apiUrl}/${id}`, { headers: this.getHeaders() });
   }
+
+  deleteAllListings(): Observable<any> {
+    return this.http.delete(`${this.apiUrl}/all/listings`, { headers: this.getHeaders() });
+  }
+
+  deleteAllKeywords(): Observable<any> {
+    return this.http.delete(`${this.apiUrl}/all/keywords`, { headers: this.getHeaders() });
+  }
 }

@@ -1,0 +1,193 @@
+<div class="warehouse-container">
+
+  <!-- HEADER -->
+  <div class="warehouse-header">
+    <div>
+      <h1>🏭 Data Warehouse</h1>
+      <p class="subtitle">Pipeline ETL: Excel → Supabase (PostgreSQL) → MongoDB → Tu App</p>
+    </div>
+    <div class="header-links">
+      <a routerLink="/dashboard" class="btn-link">Ver Dashboard →</a>
+      <a routerLink="/keywords" class="btn-link">Ver Keywords →</a>
+    </div>
+  </div>
+
+  <!-- ARQUITECTURA VISUAL -->
+  <div class="architecture-card">
+    <div class="arch-step">
+      <div class="arch-icon">📂</div>
+      <div class="arch-label">Tu Excel</div>
+      <div class="arch-desc">Sales o Keywords</div>
+    </div>
+    <div class="arch-arrow">→</div>
+    <div class="arch-step">
+      <div class="arch-icon">🐘</div>
+      <div class="arch-label">Supabase</div>
+      <div class="arch-desc">PostgreSQL Raw</div>
+    </div>
+    <div class="arch-arrow">→</div>
+    <div class="arch-step">
+      <div class="arch-icon">⚙️</div>
+      <div class="arch-label">ETL</div>
+      <div class="arch-desc">Normaliza datos</div>
+    </div>
+    <div class="arch-arrow">→</div>
+    <div class="arch-step">
+      <div class="arch-icon">🍃</div>
+      <div class="arch-label">MongoDB</div>
+      <div class="arch-desc">Atlas Cloud</div>
+    </div>
+    <div class="arch-arrow">→</div>
+    <div class="arch-step">
+      <div class="arch-icon">📊</div>
+      <div class="arch-label">Tu App</div>
+      <div class="arch-desc">Dashboard + Keywords</div>
+    </div>
+  </div>
+
+  <!-- UPLOAD SECTION -->
+  <div class="upload-grid">
+
+    <!-- Sales -->
+    <div class="upload-card">
+      <div class="upload-card-header">
+        <span class="upload-card-icon">📈</span>
+        <div>
+          <h2>Datos de Ventas</h2>
+          <p>Reporte de Amazon Seller Central</p>
+        </div>
+      </div>
+      <div class="columns-hint">
+        <strong>Columnas requeridas:</strong>
+        Identifier, Title, Category, Units Ordered, Ordered Product Sales, Total Order Items
+      </div>
+      <app-file-upload
+        label="Subir Excel de ventas"
+        [loading]="uploadingSales"
+        (fileSelected)="onSalesFile($event)"
+      ></app-file-upload>
+
+      <!-- Resultado -->
+      <div class="etl-result success" *ngIf="salesResult">
+        <div class="result-title">{{ salesResult.message }}</div>
+        <div class="result-stats">
+          <div class="stat">
+            <span class="stat-num">{{ salesResult.stats.raw }}</span>
+            <span class="stat-label">Cargados</span>
+          </div>
+          <div class="stat-arrow">→</div>
+          <div class="stat">
+            <span class="stat-num">{{ salesResult.stats.normalized }}</span>
+            <span class="stat-label">Normalizados</span>
+          </div>
+          <div class="stat-arrow">→</div>
+          <div class="stat">
+            <span class="stat-num">{{ salesResult.stats.synced }}</span>
+            <span class="stat-label">En MongoDB</span>
+          </div>
+        </div>
+        <a routerLink="/dashboard" class="btn-goto">Ver en Dashboard →</a>
+      </div>
+      <div class="etl-result error" *ngIf="salesError">❌ {{ salesError }}</div>
+    </div>
+
+    <!-- Keywords -->
+    <div class="upload-card">
+      <div class="upload-card-header">
+        <span class="upload-card-icon">🔍</span>
+        <div>
+          <h2>Keywords Helium 10</h2>
+          <p>Export de Cerebro / Magnet</p>
+        </div>
+      </div>
+      <div class="columns-hint">
+        <strong>Columnas requeridas:</strong>
+        Keyword Phrase, Category, Search Volume, Keyword Sales, Competing Products, Sponsored ASINs, Organic
+      </div>
+      <app-file-upload
+        label="Subir Excel de keywords"
+        [loading]="uploadingKeywords"
+        (fileSelected)="onKeywordsFile($event)"
+      ></app-file-upload>
+
+      <!-- Resultado -->
+      <div class="etl-result success" *ngIf="keywordsResult">
+        <div class="result-title">{{ keywordsResult.message }}</div>
+        <div class="result-stats">
+          <div class="stat">
+            <span class="stat-num">{{ keywordsResult.stats.raw }}</span>
+            <span class="stat-label">Cargadas</span>
+          </div>
+          <div class="stat-arrow">→</div>
+          <div class="stat">
+            <span class="stat-num">{{ keywordsResult.stats.normalized }}</span>
+            <span class="stat-label">Normalizadas</span>
+          </div>
+          <div class="stat-arrow">→</div>
+          <div class="stat">
+            <span class="stat-num">{{ keywordsResult.stats.synced }}</span>
+            <span class="stat-label">En MongoDB</span>
+          </div>
+        </div>
+        <a routerLink="/keywords" class="btn-goto">Ver Keywords →</a>
+      </div>
+      <div class="etl-result error" *ngIf="keywordsError">❌ {{ keywordsError }}</div>
+    </div>
+
+  </div>
+
+  <!-- SYNC LOG -->
+  <div class="logs-card">
+    <div class="logs-header">
+      <h2>📋 Historial de Sincronizaciones</h2>
+      <button class="btn-refresh" (click)="loadLogs()">🔄 Actualizar</button>
+    </div>
+
+    <div class="logs-table-wrap" *ngIf="logs.length > 0">
+      <table class="logs-table">
+        <thead>
+          <tr>
+            <th>Estado</th>
+            <th>Tipo</th>
+            <th>Fuente</th>
+            <th>Raw</th>
+            <th>Normalizado</th>
+            <th>Sincronizado</th>
+            <th>Duración</th>
+            <th>Fecha inicio</th>
+            <th>Batch ID</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let log of logs">
+            <td>
+              <span [class]="getStatusClass(log.status)">
+                {{ getStatusIcon(log.status) }} {{ log.status }}
+              </span>
+            </td>
+            <td>
+              <span class="type-badge" [class]="log.type">{{ log.type }}</span>
+            </td>
+            <td>{{ log.source }}</td>
+            <td><strong>{{ log.records_raw | number }}</strong></td>
+            <td>{{ log.records_normalized | number }}</td>
+            <td>{{ log.records_synced | number }}</td>
+            <td>{{ duration(log.started_at, log.finished_at) }}</td>
+            <td>{{ formatDate(log.started_at) }}</td>
+            <td class="batch-id">{{ log.batch_id | slice:0:8 }}...</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="logs-empty" *ngIf="logs.length === 0 && !loadingLogs">
+      <span>📋</span>
+      <p>No hay sincronizaciones todavía. Sube tu primer archivo arriba.</p>
+    </div>
+
+    <div class="logs-empty" *ngIf="loadingLogs">
+      <p>Cargando historial...</p>
+    </div>
+  </div>
+
+</div>

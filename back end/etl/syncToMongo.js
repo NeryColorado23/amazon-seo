@@ -3,7 +3,6 @@ const Listing = require('../models/Listing');
 const Keyword = require('../models/Keyword');
 const Upload = require('../models/Upload');
 
-// Sincronizar norm_listings → MongoDB
 const syncListingsToMongo = async (batchId, userId) => {
   const client = await pool.connect();
   try {
@@ -11,19 +10,16 @@ const syncListingsToMongo = async (batchId, userId) => {
       'SELECT * FROM norm_listings WHERE batch_id = $1 AND synced_to_mongo = FALSE',
       [batchId]
     );
-
     if (result.rows.length === 0) return 0;
 
-    // Crear registro de upload en MongoDB
     const uploadRecord = new Upload({
       userId,
       type: 'listings',
-      fileName: `Sync desde Supabase - ${new Date().toLocaleDateString('es-GT')}`,
+      fileName: `Warehouse sync - ${new Date().toLocaleDateString('es-GT')}`,
       recordCount: result.rows.length,
     });
     await uploadRecord.save();
 
-    // Insertar listings en MongoDB
     const listings = result.rows.map(row => ({
       userId,
       uploadId: uploadRecord._id,
@@ -42,7 +38,6 @@ const syncListingsToMongo = async (batchId, userId) => {
 
     await Listing.insertMany(listings);
 
-    // Marcar como sincronizados en Supabase
     await client.query(
       'UPDATE norm_listings SET synced_to_mongo = TRUE WHERE batch_id = $1',
       [batchId]
@@ -54,7 +49,6 @@ const syncListingsToMongo = async (batchId, userId) => {
   }
 };
 
-// Sincronizar norm_keywords → MongoDB
 const syncKeywordsToMongo = async (batchId, userId) => {
   const client = await pool.connect();
   try {
@@ -62,40 +56,44 @@ const syncKeywordsToMongo = async (batchId, userId) => {
       'SELECT * FROM norm_keywords WHERE batch_id = $1 AND synced_to_mongo = FALSE',
       [batchId]
     );
-
     if (result.rows.length === 0) return 0;
 
     const uploadRecord = new Upload({
       userId,
       type: 'keywords',
-      fileName: `Sync desde Supabase - ${new Date().toLocaleDateString('es-GT')}`,
+      fileName: `Warehouse sync - ${new Date().toLocaleDateString('es-GT')}`,
       recordCount: result.rows.length,
     });
     await uploadRecord.save();
 
-    const keywords = result.rows.map(row => ({
-      userId,
-      uploadId: uploadRecord._id,
-      keyword: row.keyword,
-      category: row.category,
-      searchVolume: row.search_volume,
-      keywordSales: row.keyword_sales,
-      competitorCount: row.competing_products,
-      sponsoredAsins: row.sponsored_asins,
-      organic: row.organic,
-      cpc: row.cpc,
-      relevance: row.relevance,
-      trend: row.trend,
-    }));
-
-    await Keyword.insertMany(keywords);
+    // Insertar en chunks para no sobrecargar MongoDB
+    const CHUNK = 500;
+    const rows = result.rows;
+    for (let i = 0; i < rows.length; i += CHUNK) {
+      const chunk = rows.slice(i, i + CHUNK);
+      const keywords = chunk.map(row => ({
+        userId,
+        uploadId: uploadRecord._id,
+        keyword: row.keyword,
+        category: row.category,
+        searchVolume: row.search_volume,
+        keywordSales: row.keyword_sales,
+        competitorCount: row.competing_products,
+        sponsoredAsins: row.sponsored_asins,
+        organic: row.organic,
+        cpc: row.cpc,
+        relevance: row.relevance,
+        trend: row.trend,
+      }));
+      await Keyword.insertMany(keywords);
+    }
 
     await client.query(
       'UPDATE norm_keywords SET synced_to_mongo = TRUE WHERE batch_id = $1',
       [batchId]
     );
 
-    return keywords.length;
+    return rows.length;
   } finally {
     client.release();
   }

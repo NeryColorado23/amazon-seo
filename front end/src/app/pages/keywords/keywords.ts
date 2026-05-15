@@ -1,14 +1,14 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { RouterModule } from '@angular/router';
 import { KeywordService } from '../../services/keyword';
 import { UploadService } from '../../services/upload';
-import { FileUpload } from '../../components/file-upload/file-upload';
 
 @Component({
   selector: 'app-keywords',
   standalone: true,
-  imports: [CommonModule, FormsModule, FileUpload],
+  imports: [CommonModule, FormsModule, RouterModule],
   templateUrl: './keywords.html',
   styleUrl: './keywords.scss',
 })
@@ -18,9 +18,6 @@ export class Keywords implements OnInit {
   opportunities: any[] = [];
   uploads: any[] = [];
   selectedUploadId = '';
-  uploading = false;
-  uploadMessage = '';
-  uploadError = '';
   activeTab = 'all';
   loading = false;
 
@@ -33,7 +30,7 @@ export class Keywords implements OnInit {
 
   constructor(
     private keywordService: KeywordService,
-    private uploadService: UploadService
+    private uploadService: UploadService,
   ) {}
 
   ngOnInit(): void {
@@ -43,15 +40,12 @@ export class Keywords implements OnInit {
 
   loadUploads(): void {
     this.uploadService.getUploads().subscribe({
-      next: (data) => {
-        this.uploads = data.filter((u) => u.type === 'keywords');
-      },
+      next: (data) => (this.uploads = data.filter(u => u.type === 'keywords')),
     });
   }
 
   loadData(): void {
     this.loading = true;
-
     const params: any = {
       sortBy: this.filters.sortBy,
       order: this.filters.order,
@@ -65,8 +59,6 @@ export class Keywords implements OnInit {
       error: () => { this.loading = false; },
     });
 
-    const topParams: any = { count: '20' };
-    if (this.selectedUploadId) topParams['uploadId'] = this.selectedUploadId;
     this.keywordService.getTopKeywords(20).subscribe({
       next: (data) => (this.topKeywords = data),
     });
@@ -76,30 +68,9 @@ export class Keywords implements OnInit {
     });
   }
 
-  onUploadSelected(): void {
-    this.loadData();
-  }
+  onUploadSelected(): void { this.loadData(); }
 
-  onFileUploaded(file: File): void {
-    this.uploading = true;
-    this.uploadMessage = '';
-    this.uploadError = '';
-
-    this.keywordService.uploadExcel(file).subscribe({
-      next: (res: any) => {
-        this.uploadMessage = res.message;
-        this.uploading = false;
-        setTimeout(() => {
-          this.loadUploads();
-          this.loadData();
-        }, 500);
-      },
-      error: (err) => {
-        this.uploadError = err.error?.message || 'Error al subir el archivo';
-        this.uploading = false;
-      },
-    });
-  }
+  applyFilters(): void { this.loadData(); }
 
   deleteUpload(upload: any): void {
     if (confirm(`¿Eliminar "${upload.fileName}" y sus ${upload.recordCount} keywords?`)) {
@@ -113,29 +84,23 @@ export class Keywords implements OnInit {
     }
   }
 
-  applyFilters(): void {
-    this.loadData();
-  }
-
-  formatDate(dateStr: string): string {
-    const d = new Date(dateStr);
-    return d.toLocaleDateString('es-GT', {
-      day: '2-digit', month: 'short', year: 'numeric',
-      hour: '2-digit', minute: '2-digit',
-    });
-  }
-
   deleteAll(): void {
     if (confirm('¿Eliminar todas las keywords?')) {
-      this.keywordService.deleteAll().subscribe({
+      this.uploadService.deleteAllKeywords().subscribe({
         next: () => {
           this.keywords = [];
           this.topKeywords = [];
           this.opportunities = [];
           this.uploads = [];
-          this.uploadMessage = '';
         },
       });
     }
+  }
+
+  formatDate(dateStr: string): string {
+    return new Date(dateStr).toLocaleDateString('es-GT', {
+      day: '2-digit', month: 'short', year: 'numeric',
+      hour: '2-digit', minute: '2-digit',
+    });
   }
 }

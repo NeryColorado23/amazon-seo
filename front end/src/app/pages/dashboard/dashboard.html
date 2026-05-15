@@ -1,5 +1,10 @@
 <div class="dashboard-container">
-  <h1 class="page-title">Dashboard de Listados</h1>
+  <div class="dash-header">
+    <h1 class="page-title">Dashboard de Listados</h1>
+    <a routerLink="/warehouse" class="btn-warehouse">
+      ➕ Subir datos en Warehouse
+    </a>
+  </div>
 
   <!-- ── MÉTRICAS ── -->
   <div class="metrics-grid" *ngIf="stats">
@@ -31,7 +36,7 @@
 
   <!-- ── HISTORIAL DE UPLOADS ── -->
   <div class="card" *ngIf="uploads.length > 0">
-    <h2 class="section-title">📁 Historial de reportes subidos</h2>
+    <h2 class="section-title">📁 Reportes cargados</h2>
     <div class="uploads-list">
       <div
         class="upload-item"
@@ -45,11 +50,12 @@
             <span class="upload-meta">{{ up.recordCount }} registros · {{ formatDate(up.uploadedAt) }}</span>
           </div>
         </div>
-        <button class="btn-delete-upload" (click)="deleteUpload(up)" title="Eliminar este reporte">🗑️</button>
+        <button class="btn-delete-upload" (click)="deleteUpload(up)" title="Eliminar">🗑️</button>
       </div>
     </div>
     <p class="upload-hint" *ngIf="selectedUploadId">
-      Mostrando reporte seleccionado. <button class="btn-link" (click)="selectedUploadId = ''; onUploadSelected()">Ver todos</button>
+      Mostrando reporte seleccionado.
+      <button class="btn-link" (click)="selectedUploadId = ''; onUploadSelected()">Ver todos</button>
     </p>
   </div>
 
@@ -80,20 +86,7 @@
     </div>
   </div>
 
-  <!-- ── UPLOAD ── -->
-  <div class="card">
-    <h2 class="section-title">Cargar nuevo reporte</h2>
-    <p class="section-desc">Sube un Excel de Amazon con columnas: Identifier, Title, Category, Units Ordered, Ordered Product Sales, Total Order Items</p>
-    <app-file-upload
-      label="Subir Excel de listados"
-      [loading]="uploading"
-      (fileSelected)="onFileUploaded($event)"
-    ></app-file-upload>
-    <p class="success-msg" *ngIf="uploadMessage">✅ {{ uploadMessage }}</p>
-    <p class="error-msg" *ngIf="uploadError">❌ {{ uploadError }}</p>
-  </div>
-
-<!-- ── FILTROS ── -->
+  <!-- ── FILTROS ── -->
   <div class="filters-bar" *ngIf="listings.length > 0">
     <div class="filter-group">
       <label>Categoría</label>
@@ -124,7 +117,7 @@
     </div>
     <button class="btn btn-danger" (click)="deleteAll()">🗑️ Borrar todo</button>
   </div>
-  
+
   <!-- ── TABLA ── -->
   <div class="card" *ngIf="filteredListings.length > 0">
     <h2 class="section-title">Listados ({{ filteredListings.length }} resultados)</h2>
@@ -155,9 +148,9 @@
   </div>
 
   <!-- ── VACÍO ── -->
-  <div class="card empty-state" *ngIf="listings.length === 0 && uploads.length === 0">
+  <div class="card empty-state" *ngIf="listings.length === 0">
     <span class="empty-icon">📊</span>
     <h2>No hay datos todavía</h2>
-    <p>Sube tu primer reporte de Amazon para comenzar.</p>
+    <p>Ve al <a routerLink="/warehouse">Warehouse</a> para subir tus primeros datos.</p>
   </div>
 </div>

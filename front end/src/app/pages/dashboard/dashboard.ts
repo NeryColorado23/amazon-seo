@@ -1,14 +1,14 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { RouterModule } from '@angular/router';
 import { ListingService } from '../../services/listing';
 import { UploadService } from '../../services/upload';
-import { FileUpload } from '../../components/file-upload/file-upload';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule, FileUpload],
+  imports: [CommonModule, FormsModule, RouterModule],
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.scss',
 })
@@ -20,9 +20,6 @@ export class Dashboard implements OnInit {
   categoryStats: any[] = [];
   uploads: any[] = [];
   selectedUploadId = '';
-  uploading = false;
-  uploadMessage = '';
-  uploadError = '';
 
   filters = {
     category: '',
@@ -77,27 +74,6 @@ export class Dashboard implements OnInit {
     this.loadData();
   }
 
-  onFileUploaded(file: File): void {
-    this.uploading = true;
-    this.uploadMessage = '';
-    this.uploadError = '';
-
-    this.listingService.uploadExcel(file).subscribe({
-      next: (res: any) => {
-        this.uploadMessage = res.message;
-        this.uploading = false;
-        setTimeout(() => {
-          this.loadUploads();
-          this.loadData();
-        }, 500);
-      },
-      error: (err) => {
-        this.uploadError = err.error?.message || 'Error al subir el archivo';
-        this.uploading = false;
-      },
-    });
-  }
-
   deleteUpload(upload: any): void {
     if (confirm(`¿Eliminar "${upload.fileName}" y sus ${upload.recordCount} registros?`)) {
       this.uploadService.deleteUpload(upload._id).subscribe({
@@ -111,7 +87,7 @@ export class Dashboard implements OnInit {
   }
 
   deleteAll(): void {
-    if (confirm('¿Eliminar TODOS los listados y reportes? Esta acción no se puede deshacer.')) {
+    if (confirm('¿Eliminar TODOS los listados y reportes?')) {
       this.uploadService.deleteAllListings().subscribe({
         next: () => {
           this.listings = [];
@@ -121,7 +97,6 @@ export class Dashboard implements OnInit {
           this.stats = null;
           this.categoryStats = [];
           this.selectedUploadId = '';
-          this.uploadMessage = '';
         },
       });
     }
@@ -129,21 +104,12 @@ export class Dashboard implements OnInit {
 
   applyFilters(): void {
     let result = [...this.listings];
-
-    if (this.filters.category) {
-      result = result.filter((l) => l.category === this.filters.category);
-    }
-    if (this.filters.minSales) {
-      result = result.filter((l) => l.salesPerDay >= +this.filters.minSales);
-    }
-    if (this.filters.minConversion) {
-      result = result.filter((l) => l.conversionRate >= +this.filters.minConversion);
-    }
-
+    if (this.filters.category) result = result.filter(l => l.category === this.filters.category);
+    if (this.filters.minSales) result = result.filter(l => l.salesPerDay >= +this.filters.minSales);
+    if (this.filters.minConversion) result = result.filter(l => l.conversionRate >= +this.filters.minConversion);
     const key = this.filters.sortBy;
     const dir = this.filters.order === 'asc' ? 1 : -1;
     result.sort((a, b) => (a[key] > b[key] ? dir : -dir));
-
     this.filteredListings = result;
   }
 

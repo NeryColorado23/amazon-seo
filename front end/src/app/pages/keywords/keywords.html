@@ -1,22 +1,12 @@
 <div class="keywords-container">
-  <h1 class="page-title">Análisis de Keywords</h1>
-
-  <!-- ── UPLOAD ── -->
-  <div class="card">
-    <h2 class="section-title">Cargar keywords</h2>
-    <p class="section-desc">Sube un Excel de Helium 10 / Cerebro con columnas: Keyword Phrase, Search Volume, Competing Products, Keyword Sales, Sponsored ASINs</p>
-    <app-file-upload
-      label="Subir Excel de keywords"
-      [loading]="uploading"
-      (fileSelected)="onFileUploaded($event)"
-    ></app-file-upload>
-    <p class="success-msg" *ngIf="uploadMessage">✅ {{ uploadMessage }}</p>
-    <p class="error-msg" *ngIf="uploadError">❌ {{ uploadError }}</p>
+  <div class="kw-header">
+    <h1 class="page-title">Análisis de Keywords</h1>
+    <a routerLink="/warehouse" class="btn-warehouse">➕ Subir keywords en Warehouse</a>
   </div>
 
   <!-- ── HISTORIAL ── -->
   <div class="card" *ngIf="uploads.length > 0">
-    <h2 class="section-title">📁 Historial de archivos de keywords</h2>
+    <h2 class="section-title">📁 Archivos de keywords cargados</h2>
     <div class="uploads-list">
       <div
         class="upload-item"
@@ -34,7 +24,8 @@
       </div>
     </div>
     <p class="upload-hint" *ngIf="selectedUploadId">
-      Mostrando archivo seleccionado. <button class="btn-link" (click)="selectedUploadId = ''; onUploadSelected()">Ver todos</button>
+      Mostrando archivo seleccionado.
+      <button class="btn-link" (click)="selectedUploadId = ''; onUploadSelected()">Ver todos</button>
     </p>
   </div>
 
@@ -71,7 +62,7 @@
         <option value="asc">Menor a mayor</option>
       </select>
     </div>
-    <button class="btn btn-danger" (click)="deleteAll()">Borrar todo</button>
+    <button class="btn btn-danger" (click)="deleteAll()">🗑️ Borrar todo</button>
   </div>
 
   <!-- ── TABLA: TODAS ── -->
@@ -163,9 +154,9 @@
   </div>
 
   <!-- ── VACÍO ── -->
-  <div class="card empty-state" *ngIf="keywords.length === 0">
+  <div class="card empty-state" *ngIf="keywords.length === 0 && !loading">
     <span class="empty-icon">🔍</span>
     <h2>No hay keywords todavía</h2>
-    <p>Sube un archivo exportado desde Helium 10 o Cerebro.</p>
+    <p>Ve al <a routerLink="/warehouse">Warehouse</a> para subir tu archivo de Helium 10.</p>
   </div>
 </div>

@@ -7,6 +7,7 @@ import { Keywords } from './pages/keywords/keywords';
 import { Editor } from './pages/editor/editor';
 import { Reset } from './pages/reset/reset';
 import { Warehouse } from './pages/warehouse/warehouse';
+import { Inventory } from './pages/inventory/inventory';
 
 export const routes: Routes = [
   { path: '', redirectTo: '/login', pathMatch: 'full' },
@@ -17,5 +18,6 @@ export const routes: Routes = [
   { path: 'keywords', component: Keywords, canActivate: [authGuard] },
   { path: 'editor', component: Editor, canActivate: [authGuard] },
   { path: 'warehouse', component: Warehouse, canActivate: [authGuard] },
+  { path: 'inventory', component: Inventory, canActivate: [authGuard] },
   { path: '**', redirectTo: '/login' },
 ];

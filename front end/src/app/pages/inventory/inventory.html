@@ -1,0 +1,195 @@
+<div class="inventory-container">
+
+  <div class="inv-header">
+    <div>
+      <h1 class="page-title">📦 Inventario & Costos</h1>
+      <p class="subtitle">Stock FBA, márgenes y gestión de proveedores</p>
+    </div>
+    <a routerLink="/warehouse" class="btn-warehouse">➕ Actualizar en Warehouse</a>
+  </div>
+
+  <!-- HISTORIAL DE UPLOADS -->
+  <div class="card" *ngIf="uploads.length > 0">
+    <h2 class="section-title">📁 Cargas de inventario</h2>
+    <div class="uploads-list">
+      <div
+        class="upload-item"
+        *ngFor="let up of uploads"
+        [class.selected]="selectedUploadId === up._id"
+      >
+        <div class="upload-info"
+          (click)="selectedUploadId = up._id === selectedUploadId ? '' : up._id; onUploadSelected()">
+          <span class="upload-icon">📦</span>
+          <div class="upload-details">
+            <strong>{{ up.fileName }}</strong>
+            <span class="upload-meta">{{ up.recordCount }} productos · {{ formatDate(up.uploadedAt) }}</span>
+          </div>
+        </div>
+        <button class="btn-delete-upload" (click)="deleteUpload(up)" title="Eliminar">🗑️</button>
+      </div>
+    </div>
+    <p class="upload-hint" *ngIf="selectedUploadId">
+      Mostrando carga seleccionada.
+      <button class="btn-link" (click)="selectedUploadId = ''; onUploadSelected()">Ver todos</button>
+    </p>
+  </div>
+
+  <!-- MÉTRICAS GENERALES -->
+  <div class="metrics-grid" *ngIf="stats">
+    <div class="metric-card">
+      <div class="metric-value">{{ stats.totalProducts || 0 }}</div>
+      <div class="metric-label">Total productos</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-value">{{ stats.totalFbaStock | number }}</div>
+      <div class="metric-label">Unidades en FBA</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-value">{{ stats.avgMarginPct | number:'1.1-1' }}%</div>
+      <div class="metric-label">Margen promedio</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-value">${{ stats.avgCogs | number:'1.2-2' }}</div>
+      <div class="metric-label">COGS promedio</div>
+    </div>
+    <div class="metric-card alert-card" [class.has-alert]="stats.lowStock > 0">
+      <div class="metric-value">{{ stats.lowStock || 0 }}</div>
+      <div class="metric-label">⚠️ Stock bajo</div>
+    </div>
+    <div class="metric-card alert-card" [class.has-alert]="stats.outStock > 0">
+      <div class="metric-value">{{ stats.outStock || 0 }}</div>
+      <div class="metric-label">🔴 Sin stock</div>
+    </div>
+  </div>
+
+  <!-- ALERTAS -->
+  <div class="alert-banner" *ngIf="stats && (stats.lowStock > 0 || stats.outStock > 0)">
+    <span class="alert-icon">⚠️</span>
+    <span>
+      Tienes <strong>{{ stats.lowStock }} productos</strong> con stock bajo y
+      <strong>{{ stats.outStock }} productos</strong> sin stock.
+    </span>
+  </div>
+
+  <!-- STATS POR CATEGORÍA -->
+  <div class="card" *ngIf="categoryStats.length > 0">
+    <h2 class="section-title">Rendimiento por categoría</h2>
+    <div class="table-scroll">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Categoría</th>
+            <th>Productos</th>
+            <th>Stock total FBA</th>
+            <th>COGS prom.</th>
+            <th>Margen prom.</th>
+            <th>Stock bajo</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let cat of categoryStats">
+            <td><strong>{{ cat._id }}</strong></td>
+            <td>{{ cat.totalProducts }}</td>
+            <td>{{ cat.totalStock | number }}</td>
+            <td>${{ cat.avgCogs | number:'1.2-2' }}</td>
+            <td><span [class]="getMarginClass(cat.avgMarginPct)">{{ cat.avgMarginPct | number:'1.1-1' }}%</span></td>
+            <td>
+              <span *ngIf="cat.lowStock > 0" class="stock-low">⚠️ {{ cat.lowStock }}</span>
+              <span *ngIf="cat.lowStock === 0" class="stock-ok">✅ OK</span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- FILTROS -->
+  <div class="filters-bar" *ngIf="costs.length > 0">
+    <div class="filter-group">
+      <label>Categoría</label>
+      <select [(ngModel)]="filters.category" (change)="applyFilters()">
+        <option value="">Todas</option>
+        <option *ngFor="let cat of categories" [value]="cat">{{ cat }}</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label>Estado stock</label>
+      <select [(ngModel)]="filters.stockStatus" (change)="applyFilters()">
+        <option value="">Todos</option>
+        <option value="ok">✅ OK</option>
+        <option value="low">⚠️ Bajo</option>
+        <option value="out">🔴 Sin stock</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label>Ordenar por</label>
+      <select [(ngModel)]="filters.sortBy" (change)="applyFilters()">
+        <option value="fbaStock">Stock FBA</option>
+        <option value="marginPct">Margen %</option>
+        <option value="cogs">COGS</option>
+        <option value="reorderPoint">Reorder Point</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label>Orden</label>
+      <select [(ngModel)]="filters.order" (change)="applyFilters()">
+        <option value="asc">Menor a mayor</option>
+        <option value="desc">Mayor a menor</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- TABLA -->
+  <div class="card" *ngIf="costs.length > 0">
+    <h2 class="section-title">Productos ({{ costs.length }})</h2>
+    <div class="table-scroll">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>SKU</th>
+            <th>Título</th>
+            <th>Categoría</th>
+            <th>COGS</th>
+            <th>Precio venta</th>
+            <th>Margen $</th>
+            <th>Margen %</th>
+            <th>Stock FBA</th>
+            <th>Reorder</th>
+            <th>Lead Time</th>
+            <th>Proveedor</th>
+            <th>Estado</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let item of costs" [class.row-alert]="item.stockStatus !== 'ok'">
+            <td class="asin">{{ item.identifier }}</td>
+            <td class="title-cell">{{ item.title }}</td>
+            <td>{{ item.category }}</td>
+            <td>${{ item.cogs | number:'1.2-2' }}</td>
+            <td>${{ item.salePrice | number:'1.2-2' }}</td>
+            <td>${{ item.margin | number:'1.2-2' }}</td>
+            <td><span [class]="getMarginClass(item.marginPct)">{{ item.marginPct | number:'1.1-1' }}%</span></td>
+            <td><strong [class]="getStockClass(item.stockStatus)">{{ item.fbaStock | number }}</strong></td>
+            <td>{{ item.reorderPoint | number }}</td>
+            <td>{{ item.leadTimeDays }}d</td>
+            <td>{{ item.supplier }}</td>
+            <td>
+              <span [class]="getStockClass(item.stockStatus)">
+                {{ getStockIcon(item.stockStatus) }}
+                {{ item.stockStatus === 'ok' ? 'OK' : item.stockStatus === 'low' ? 'Bajo' : 'Sin stock' }}
+              </span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- VACÍO -->
+  <div class="card empty-state" *ngIf="costs.length === 0">
+    <span class="empty-icon">📦</span>
+    <h2>No hay datos de inventario</h2>
+    <p>Ve al <a routerLink="/warehouse">Warehouse</a> y sube el archivo de costos e inventario.</p>
+  </div>
+
+</div>

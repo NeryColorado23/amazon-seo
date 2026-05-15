@@ -17,22 +17,22 @@ export class EtlService {
   uploadSales(file: File): Observable<any> {
     const formData = new FormData();
     formData.append('file', file);
-    return this.http.post(`${this.apiUrl}/upload-sales`, formData, {
-      headers: this.getHeaders(),
-    });
+    return this.http.post(`${this.apiUrl}/upload-sales`, formData, { headers: this.getHeaders() });
   }
 
   uploadKeywords(file: File): Observable<any> {
     const formData = new FormData();
     formData.append('file', file);
-    return this.http.post(`${this.apiUrl}/upload-keywords`, formData, {
-      headers: this.getHeaders(),
-    });
+    return this.http.post(`${this.apiUrl}/upload-keywords`, formData, { headers: this.getHeaders() });
+  }
+
+  uploadCosts(file: File): Observable<any> {
+    const formData = new FormData();
+    formData.append('file', file);
+    return this.http.post(`${this.apiUrl}/upload-costs`, formData, { headers: this.getHeaders() });
   }
 
   getLogs(): Observable<any[]> {
-    return this.http.get<any[]>(`${this.apiUrl}/logs`, {
-      headers: this.getHeaders(),
-    });
+    return this.http.get<any[]>(`${this.apiUrl}/logs`, { headers: this.getHeaders() });
   }
 }

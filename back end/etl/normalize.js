@@ -10,12 +10,10 @@ const normalizeSales = async (batchId) => {
   const client = await pool.connect();
   try {
     const raw = await client.query(
-      'SELECT * FROM raw_sales WHERE batch_id = $1',
-      [batchId]
+      'SELECT * FROM raw_sales WHERE batch_id = $1', [batchId]
     );
     if (raw.rows.length === 0) return 0;
 
-    // INSERT multi-row
     const CHUNK = 100;
     const rows = raw.rows;
     for (let i = 0; i < rows.length; i += CHUNK) {
@@ -57,8 +55,7 @@ const normalizeKeywords = async (batchId) => {
   const client = await pool.connect();
   try {
     const raw = await client.query(
-      'SELECT * FROM raw_keywords WHERE batch_id = $1',
-      [batchId]
+      'SELECT * FROM raw_keywords WHERE batch_id = $1', [batchId]
     );
     if (raw.rows.length === 0) return 0;
 
@@ -103,4 +100,65 @@ const normalizeKeywords = async (batchId) => {
   }
 };
 
-module.exports = { normalizeSales, normalizeKeywords };
+const normalizeCosts = async (batchId) => {
+  const client = await pool.connect();
+  try {
+    const raw = await client.query(
+      'SELECT * FROM raw_costs WHERE batch_id = $1', [batchId]
+    );
+    if (raw.rows.length === 0) return 0;
+
+    const CHUNK = 100;
+    const rows = raw.rows;
+    for (let i = 0; i < rows.length; i += CHUNK) {
+      const chunk = rows.slice(i, i + CHUNK);
+      const placeholders = chunk.map((_, idx) => {
+        const b = idx * 15;
+        return `($${b+1},$${b+2},$${b+3},$${b+4},$${b+5},$${b+6},$${b+7},$${b+8},$${b+9},$${b+10},$${b+11},$${b+12},$${b+13},$${b+14},$${b+15})`;
+      }).join(',');
+
+      const flat = chunk.flatMap(row => {
+        const cogs = cleanNum(row.cogs);
+        const salePrice = cleanNum(row.sale_price);
+        const margin = salePrice - cogs;
+        const marginPct = salePrice > 0 ? (margin / salePrice) * 100 : 0;
+        const fbaStock = parseInt(row.fba_stock) || 0;
+        const reorderPoint = parseInt(row.reorder_point) || 0;
+        const stockStatus = fbaStock <= 0 ? 'out'
+          : fbaStock <= reorderPoint ? 'low' : 'ok';
+
+        return [
+          batchId,
+          row.source || 'excel_upload',
+          row.identifier || '',
+          row.title || '',
+          row.category || '',
+          cogs,
+          salePrice,
+          parseFloat(margin.toFixed(2)),
+          parseFloat(marginPct.toFixed(2)),
+          fbaStock,
+          reorderPoint,
+          stockStatus,
+          parseInt(row.lead_time_days) || 0,
+          row.supplier || '',
+          false,
+        ];
+      });
+
+      await client.query(
+        `INSERT INTO norm_costs
+         (batch_id, source, identifier, title, category, cogs, sale_price,
+          margin, margin_pct, fba_stock, reorder_point, stock_status,
+          lead_time_days, supplier, synced_to_mongo)
+         VALUES ${placeholders}`,
+        flat
+      );
+    }
+    return rows.length;
+  } finally {
+    client.release();
+  }
+};
+
+module.exports = { normalizeSales, normalizeKeywords, normalizeCosts };

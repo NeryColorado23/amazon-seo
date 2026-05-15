@@ -13,27 +13,29 @@ import { FileUpload } from '../../components/file-upload/file-upload';
 })
 export class Warehouse implements OnInit {
   logs: any[] = [];
+
   uploadingSales = false;
   uploadingKeywords = false;
+  uploadingCosts = false;
+
   salesResult: any = null;
   keywordsResult: any = null;
+  costsResult: any = null;
+
   salesError = '';
   keywordsError = '';
+  costsError = '';
+
   loadingLogs = false;
 
   constructor(private etlService: EtlService) {}
 
-  ngOnInit(): void {
-    this.loadLogs();
-  }
+  ngOnInit(): void { this.loadLogs(); }
 
   loadLogs(): void {
     this.loadingLogs = true;
     this.etlService.getLogs().subscribe({
-      next: (data) => {
-        this.logs = data;
-        this.loadingLogs = false;
-      },
+      next: (data) => { this.logs = data; this.loadingLogs = false; },
       error: () => { this.loadingLogs = false; },
     });
   }
@@ -42,17 +44,9 @@ export class Warehouse implements OnInit {
     this.uploadingSales = true;
     this.salesResult = null;
     this.salesError = '';
-
     this.etlService.uploadSales(file).subscribe({
-      next: (res) => {
-        this.salesResult = res;
-        this.uploadingSales = false;
-        this.loadLogs();
-      },
-      error: (err) => {
-        this.salesError = err.error?.message || 'Error al procesar el archivo';
-        this.uploadingSales = false;
-      },
+      next: (res) => { this.salesResult = res; this.uploadingSales = false; this.loadLogs(); },
+      error: (err) => { this.salesError = err.error?.message || 'Error al procesar'; this.uploadingSales = false; },
     });
   }
 
@@ -60,17 +54,19 @@ export class Warehouse implements OnInit {
     this.uploadingKeywords = true;
     this.keywordsResult = null;
     this.keywordsError = '';
-
     this.etlService.uploadKeywords(file).subscribe({
-      next: (res) => {
-        this.keywordsResult = res;
-        this.uploadingKeywords = false;
-        this.loadLogs();
-      },
-      error: (err) => {
-        this.keywordsError = err.error?.message || 'Error al procesar el archivo';
-        this.uploadingKeywords = false;
-      },
+      next: (res) => { this.keywordsResult = res; this.uploadingKeywords = false; this.loadLogs(); },
+      error: (err) => { this.keywordsError = err.error?.message || 'Error al procesar'; this.uploadingKeywords = false; },
+    });
+  }
+
+  onCostsFile(file: File): void {
+    this.uploadingCosts = true;
+    this.costsResult = null;
+    this.costsError = '';
+    this.etlService.uploadCosts(file).subscribe({
+      next: (res) => { this.costsResult = res; this.uploadingCosts = false; this.loadLogs(); },
+      error: (err) => { this.costsError = err.error?.message || 'Error al procesar'; this.uploadingCosts = false; },
     });
   }
 
@@ -84,6 +80,13 @@ export class Warehouse implements OnInit {
     if (status === 'completed') return '✅';
     if (status === 'error') return '❌';
     return '⏳';
+  }
+
+  getTypeClass(type: string): string {
+    if (type === 'listings') return 'type-listings';
+    if (type === 'keywords') return 'type-keywords';
+    if (type === 'costs') return 'type-costs';
+    return '';
   }
 
   formatDate(dateStr: string): string {

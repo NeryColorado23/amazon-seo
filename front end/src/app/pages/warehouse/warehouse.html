@@ -7,17 +7,17 @@
       <p class="subtitle">Pipeline ETL: Excel → Supabase (PostgreSQL) → MongoDB → Tu App</p>
     </div>
     <div class="header-links">
-      <a routerLink="/dashboard" class="btn-link">Ver Dashboard →</a>
-      <a routerLink="/keywords" class="btn-link">Ver Keywords →</a>
+      <a routerLink="/dashboard" class="btn-link">📊 Ver Dashboard</a>
+      <a routerLink="/keywords" class="btn-link">🔍 Ver Keywords</a>
     </div>
   </div>
 
-  <!-- ARQUITECTURA VISUAL -->
+  <!-- ARQUITECTURA -->
   <div class="architecture-card">
     <div class="arch-step">
       <div class="arch-icon">📂</div>
-      <div class="arch-label">Tu Excel</div>
-      <div class="arch-desc">Sales o Keywords</div>
+      <div class="arch-label">3 Fuentes</div>
+      <div class="arch-desc">Ventas · Keywords · Costos</div>
     </div>
     <div class="arch-arrow">→</div>
     <div class="arch-step">
@@ -29,7 +29,7 @@
     <div class="arch-step">
       <div class="arch-icon">⚙️</div>
       <div class="arch-label">ETL</div>
-      <div class="arch-desc">Normaliza datos</div>
+      <div class="arch-desc">Normaliza · Unifica</div>
     </div>
     <div class="arch-arrow">→</div>
     <div class="arch-step">
@@ -41,97 +41,111 @@
     <div class="arch-step">
       <div class="arch-icon">📊</div>
       <div class="arch-label">Tu App</div>
-      <div class="arch-desc">Dashboard + Keywords</div>
+      <div class="arch-desc">Dashboard · Keywords · Editor</div>
     </div>
   </div>
 
-  <!-- UPLOAD SECTION -->
-  <div class="upload-grid">
+  <!-- FUENTES — 3 cards -->
+  <div class="sources-title">
+    <h2>📥 Fuentes de datos</h2>
+    <p>Sube cada archivo para iniciar el pipeline ETL</p>
+  </div>
 
-    <!-- Sales -->
-    <div class="upload-card">
+  <div class="upload-grid-3">
+
+    <!-- FUENTE 1: Ventas -->
+    <div class="upload-card source-1">
+      <div class="source-badge">Fuente 1</div>
       <div class="upload-card-header">
         <span class="upload-card-icon">📈</span>
         <div>
-          <h2>Datos de Ventas</h2>
-          <p>Reporte de Amazon Seller Central</p>
+          <h2>Amazon Seller Central</h2>
+          <p>Reporte de ventas y rendimiento</p>
         </div>
       </div>
       <div class="columns-hint">
-        <strong>Columnas requeridas:</strong>
-        Identifier, Title, Category, Units Ordered, Ordered Product Sales, Total Order Items
+        <strong>Columnas:</strong> Identifier, Title, Category, Units Ordered, Ordered Product Sales, Total Order Items
       </div>
       <app-file-upload
         label="Subir Excel de ventas"
         [loading]="uploadingSales"
         (fileSelected)="onSalesFile($event)"
       ></app-file-upload>
-
-      <!-- Resultado -->
       <div class="etl-result success" *ngIf="salesResult">
         <div class="result-title">{{ salesResult.message }}</div>
         <div class="result-stats">
-          <div class="stat">
-            <span class="stat-num">{{ salesResult.stats.raw }}</span>
-            <span class="stat-label">Cargados</span>
-          </div>
+          <div class="stat"><span class="stat-num">{{ salesResult.stats.raw }}</span><span class="stat-label">Raw</span></div>
           <div class="stat-arrow">→</div>
-          <div class="stat">
-            <span class="stat-num">{{ salesResult.stats.normalized }}</span>
-            <span class="stat-label">Normalizados</span>
-          </div>
+          <div class="stat"><span class="stat-num">{{ salesResult.stats.normalized }}</span><span class="stat-label">Norm.</span></div>
           <div class="stat-arrow">→</div>
-          <div class="stat">
-            <span class="stat-num">{{ salesResult.stats.synced }}</span>
-            <span class="stat-label">En MongoDB</span>
-          </div>
+          <div class="stat"><span class="stat-num">{{ salesResult.stats.synced }}</span><span class="stat-label">MongoDB</span></div>
         </div>
         <a routerLink="/dashboard" class="btn-goto">Ver en Dashboard →</a>
       </div>
       <div class="etl-result error" *ngIf="salesError">❌ {{ salesError }}</div>
     </div>
 
-    <!-- Keywords -->
-    <div class="upload-card">
+    <!-- FUENTE 2: Keywords -->
+    <div class="upload-card source-2">
+      <div class="source-badge">Fuente 2</div>
       <div class="upload-card-header">
         <span class="upload-card-icon">🔍</span>
         <div>
-          <h2>Keywords Helium 10</h2>
-          <p>Export de Cerebro / Magnet</p>
+          <h2>Helium 10 — Cerebro</h2>
+          <p>Keywords con volúmenes de búsqueda</p>
         </div>
       </div>
       <div class="columns-hint">
-        <strong>Columnas requeridas:</strong>
-        Keyword Phrase, Category, Search Volume, Keyword Sales, Competing Products, Sponsored ASINs, Organic
+        <strong>Columnas:</strong> Keyword Phrase, Category, Search Volume, Keyword Sales, Competing Products, Sponsored ASINs, Organic
       </div>
       <app-file-upload
         label="Subir Excel de keywords"
         [loading]="uploadingKeywords"
         (fileSelected)="onKeywordsFile($event)"
       ></app-file-upload>
-
-      <!-- Resultado -->
       <div class="etl-result success" *ngIf="keywordsResult">
         <div class="result-title">{{ keywordsResult.message }}</div>
         <div class="result-stats">
-          <div class="stat">
-            <span class="stat-num">{{ keywordsResult.stats.raw }}</span>
-            <span class="stat-label">Cargadas</span>
-          </div>
+          <div class="stat"><span class="stat-num">{{ keywordsResult.stats.raw }}</span><span class="stat-label">Raw</span></div>
           <div class="stat-arrow">→</div>
-          <div class="stat">
-            <span class="stat-num">{{ keywordsResult.stats.normalized }}</span>
-            <span class="stat-label">Normalizadas</span>
-          </div>
+          <div class="stat"><span class="stat-num">{{ keywordsResult.stats.normalized }}</span><span class="stat-label">Norm.</span></div>
           <div class="stat-arrow">→</div>
-          <div class="stat">
-            <span class="stat-num">{{ keywordsResult.stats.synced }}</span>
-            <span class="stat-label">En MongoDB</span>
-          </div>
+          <div class="stat"><span class="stat-num">{{ keywordsResult.stats.synced }}</span><span class="stat-label">MongoDB</span></div>
         </div>
         <a routerLink="/keywords" class="btn-goto">Ver Keywords →</a>
       </div>
       <div class="etl-result error" *ngIf="keywordsError">❌ {{ keywordsError }}</div>
+    </div>
+
+    <!-- FUENTE 3: Costos/Inventario -->
+    <div class="upload-card source-3">
+      <div class="source-badge">Fuente 3</div>
+      <div class="upload-card-header">
+        <span class="upload-card-icon">📦</span>
+        <div>
+          <h2>Costos e Inventario</h2>
+          <p>COGS, stock FBA y proveedores</p>
+        </div>
+      </div>
+      <div class="columns-hint">
+        <strong>Columnas:</strong> Identifier, Title, Category, COGS, Sale Price, FBA Stock, Reorder Point, Lead Time Days, Supplier
+      </div>
+      <app-file-upload
+        label="Subir Excel de costos"
+        [loading]="uploadingCosts"
+        (fileSelected)="onCostsFile($event)"
+      ></app-file-upload>
+      <div class="etl-result success" *ngIf="costsResult">
+        <div class="result-title">{{ costsResult.message }}</div>
+        <div class="result-stats">
+          <div class="stat"><span class="stat-num">{{ costsResult.stats.raw }}</span><span class="stat-label">Raw</span></div>
+          <div class="stat-arrow">→</div>
+          <div class="stat"><span class="stat-num">{{ costsResult.stats.normalized }}</span><span class="stat-label">Norm.</span></div>
+          <div class="stat-arrow">→</div>
+          <div class="stat"><span class="stat-num">{{ costsResult.stats.synced }}</span><span class="stat-label">MongoDB</span></div>
+        </div>
+      </div>
+      <div class="etl-result error" *ngIf="costsError">❌ {{ costsError }}</div>
     </div>
 
   </div>
@@ -139,7 +153,7 @@
   <!-- SYNC LOG -->
   <div class="logs-card">
     <div class="logs-header">
-      <h2>📋 Historial de Sincronizaciones</h2>
+      <h2>📋 Historial de sincronizaciones</h2>
       <button class="btn-refresh" (click)="loadLogs()">🔄 Actualizar</button>
     </div>
 
@@ -148,33 +162,25 @@
         <thead>
           <tr>
             <th>Estado</th>
-            <th>Tipo</th>
             <th>Fuente</th>
+            <th>Tipo</th>
             <th>Raw</th>
             <th>Normalizado</th>
-            <th>Sincronizado</th>
+            <th>MongoDB</th>
             <th>Duración</th>
-            <th>Fecha inicio</th>
-            <th>Batch ID</th>
+            <th>Fecha</th>
           </tr>
         </thead>
         <tbody>
           <tr *ngFor="let log of logs">
-            <td>
-              <span [class]="getStatusClass(log.status)">
-                {{ getStatusIcon(log.status) }} {{ log.status }}
-              </span>
-            </td>
-            <td>
-              <span class="type-badge" [class]="log.type">{{ log.type }}</span>
-            </td>
+            <td><span [class]="getStatusClass(log.status)">{{ getStatusIcon(log.status) }} {{ log.status }}</span></td>
             <td>{{ log.source }}</td>
+            <td><span class="type-badge" [class]="getTypeClass(log.type)">{{ log.type }}</span></td>
             <td><strong>{{ log.records_raw | number }}</strong></td>
             <td>{{ log.records_normalized | number }}</td>
             <td>{{ log.records_synced | number }}</td>
             <td>{{ duration(log.started_at, log.finished_at) }}</td>
             <td>{{ formatDate(log.started_at) }}</td>
-            <td class="batch-id">{{ log.batch_id | slice:0:8 }}...</td>
           </tr>
         </tbody>
       </table>
@@ -182,11 +188,7 @@
 
     <div class="logs-empty" *ngIf="logs.length === 0 && !loadingLogs">
       <span>📋</span>
-      <p>No hay sincronizaciones todavía. Sube tu primer archivo arriba.</p>
-    </div>
-
-    <div class="logs-empty" *ngIf="loadingLogs">
-      <p>Cargando historial...</p>
+      <p>No hay sincronizaciones todavía.</p>
     </div>
   </div>
 

@@ -26,7 +26,6 @@
     <!-- PANEL IZQUIERDO: Keywords -->
     <div class="keywords-panel">
       <h3>Keywords</h3>
-
       <div class="kw-filters">
         <div class="filter-row">
           <label>Categoría</label>
@@ -62,13 +61,11 @@
         </div>
       </div>
 
-      <!-- Contador con usadas -->
       <div class="kw-count">
         {{ filteredKeywords.length }} keywords ·
         <span class="kw-used-count">{{ usedKeywordsInText.size }} usadas ✅</span>
       </div>
 
-      <!-- Leyenda de colores -->
       <div class="kw-legend">
         <span class="legend-item" style="color:#dc2626">● +50k</span>
         <span class="legend-item" style="color:#ea580c">● +20k</span>
@@ -77,7 +74,6 @@
         <span class="legend-item" style="color:#16a34a">● -5k</span>
       </div>
 
-      <!-- Lista de keywords -->
       <div class="kw-list" *ngIf="!loadingKeywords">
         <div
           class="kw-item"
@@ -116,10 +112,8 @@
       </div>
     </div>
 
-    <!-- PANEL DERECHO: Listing fields -->
+    <!-- PANEL DERECHO -->
     <div class="listing-panel">
-
-      <!-- TÍTULO -->
       <div class="field-group">
         <div class="field-header">
           <label>Título</label>
@@ -129,15 +123,11 @@
         </div>
         <div class="highlight-wrapper">
           <div class="highlight-display" [innerHTML]="highlightText(title)"></div>
-          <textarea
-            [(ngModel)]="title"
-            (ngModelChange)="onTextChange()"
-            rows="3"
+          <textarea [(ngModel)]="title" (ngModelChange)="onTextChange()" rows="3"
             placeholder="Incluye keywords principales, marca, características clave..."
-            [class.over-limit]="isOverLimit(title, limits.title)"
-          ></textarea>
+            [class.over-limit]="isOverLimit(title, limits.title)"></textarea>
         </div>
-        <div class="field-hint">Amazon permite hasta 200 bytes. Incluye las keywords de mayor volumen.</div>
+        <div class="field-hint">Amazon permite hasta 200 bytes.</div>
         <div class="vol-legend">
           <span style="color:#dc2626">■ Muy alto (+50k)</span>
           <span style="color:#ea580c">■ Alto (+20k)</span>
@@ -147,7 +137,6 @@
         </div>
       </div>
 
-      <!-- BULLET POINTS -->
       <div class="field-group" *ngFor="let n of [1,2,3,4,5]">
         <div class="field-header">
           <label>Bullet Point #{{ n }}</label>
@@ -156,20 +145,16 @@
           </span>
         </div>
         <div class="highlight-wrapper">
-          <div class="highlight-display"
-            [innerHTML]="highlightText(n===1?bullet1:n===2?bullet2:n===3?bullet3:n===4?bullet4:bullet5)">
-          </div>
+          <div class="highlight-display" [innerHTML]="highlightText(n===1?bullet1:n===2?bullet2:n===3?bullet3:n===4?bullet4:bullet5)"></div>
           <textarea
             [ngModel]="n===1?bullet1:n===2?bullet2:n===3?bullet3:n===4?bullet4:bullet5"
             (ngModelChange)="n===1?bullet1=$event:n===2?bullet2=$event:n===3?bullet3=$event:n===4?bullet4=$event:bullet5=$event; onTextChange()"
-            rows="2"
-            [placeholder]="'Bullet '+n+': beneficio, característica o keyword importante...'"
-            [class.over-limit]="isOverLimit(n===1?bullet1:n===2?bullet2:n===3?bullet3:n===4?bullet4:bullet5, limits.bullet)"
-          ></textarea>
+            rows="2" [placeholder]="'Bullet '+n+': beneficio, característica o keyword importante...'"
+            [class.over-limit]="isOverLimit(n===1?bullet1:n===2?bullet2:n===3?bullet3:n===4?bullet4:bullet5, limits.bullet)">
+          </textarea>
         </div>
       </div>
 
-      <!-- DESCRIPCIÓN -->
       <div class="field-group">
         <div class="field-header">
           <label>Descripción</label>
@@ -179,17 +164,12 @@
         </div>
         <div class="highlight-wrapper">
           <div class="highlight-display" [innerHTML]="highlightText(description)"></div>
-          <textarea
-            [(ngModel)]="description"
-            (ngModelChange)="onTextChange()"
-            rows="5"
+          <textarea [(ngModel)]="description" (ngModelChange)="onTextChange()" rows="5"
             placeholder="Descripción detallada del producto..."
-            [class.over-limit]="isOverLimit(description, limits.description)"
-          ></textarea>
+            [class.over-limit]="isOverLimit(description, limits.description)"></textarea>
         </div>
       </div>
 
-      <!-- SEARCH TERMS -->
       <div class="field-group">
         <div class="field-header">
           <label>Search Terms (Backend)</label>
@@ -199,17 +179,12 @@
         </div>
         <div class="highlight-wrapper">
           <div class="highlight-display" [innerHTML]="highlightText(searchTerms)"></div>
-          <textarea
-            [(ngModel)]="searchTerms"
-            (ngModelChange)="onTextChange()"
-            rows="3"
-            placeholder="Keywords separadas por espacios. No repetir las del título ni bullets..."
-            [class.over-limit]="isOverLimit(searchTerms, limits.searchTerms)"
-          ></textarea>
+          <textarea [(ngModel)]="searchTerms" (ngModelChange)="onTextChange()" rows="3"
+            placeholder="Keywords separadas por espacios..."
+            [class.over-limit]="isOverLimit(searchTerms, limits.searchTerms)"></textarea>
         </div>
         <div class="field-hint">Máximo 250 bytes. No usar comas, no repetir keywords ya usadas.</div>
       </div>
-
     </div>
   </div>
 
@@ -219,10 +194,7 @@
 
       <div class="amz-topbar">
         <div class="amz-logo">amazon</div>
-        <div class="amz-search">
-          <input type="text" placeholder="Search Amazon" disabled />
-          <button>🔍</button>
-        </div>
+        <div class="amz-search"><input type="text" placeholder="Search Amazon" disabled /><button>🔍</button></div>
         <div class="amz-nav-right">
           <span>Returns<br><strong>&amp; Orders</strong></span>
           <span>🛒 Cart</span>
@@ -234,34 +206,90 @@
       </div>
 
       <div class="amz-main">
+
+        <!-- Imágenes -->
         <div class="amz-images">
-          <div class="amz-main-image">
-            <div class="amz-img-placeholder">
-              <span>🖼️</span>
-              <p>Imagen principal<br>del producto</p>
+          <div class="amz-main-image" (click)="mainImgInput.click()">
+            <img *ngIf="images[0]" [src]="images[0]" alt="Main" />
+            <div class="amz-img-placeholder" *ngIf="!images[0]">
+              <span>📷</span>
+              <p>Click para subir<br>imagen principal</p>
+            </div>
+            <input #mainImgInput type="file" accept="image/*" style="display:none"
+              (change)="onImageUpload($event, 0)" />
+          </div>
+
+          <div class="amz-thumbnails">
+            <div
+              class="amz-thumb"
+              *ngFor="let img of images; let i = index"
+              [class.active-thumb]="i === 0"
+              [class.drag-over]="dragOverIndex === i"
+              draggable="true"
+              (dragstart)="onDragStart(i)"
+              (dragover)="onDragOver($event, i)"
+              (drop)="onDrop($event, i)"
+              (dragend)="onDragEnd()"
+            >
+              <img [src]="img" alt="thumb" (click)="thumbInput.click()" />
+              <button class="thumb-remove" (click)="$event.stopPropagation(); removeImage(i)">✕</button>
+              <input #thumbInput type="file" accept="image/*" style="display:none"
+                (change)="onImageUpload($event, i)" />
+            </div>
+
+            <div class="amz-thumb add-thumb" *ngIf="images.length < 7" (click)="addImgInput.click()">
+              <span>➕</span>
+              <input #addImgInput type="file" accept="image/*" style="display:none"
+                (change)="onImageUpload($event, -1)" />
             </div>
           </div>
-          <div class="amz-thumbnails">
-            <div class="amz-thumb" *ngFor="let i of [1,2,3,4,5,6]">📷</div>
-          </div>
+
+          <p class="img-hint">Arrastra para reordenar · Click para cambiar · ✕ para borrar</p>
         </div>
 
+        <!-- Info producto -->
         <div class="amz-product-info">
           <div class="amz-brand">Visit the <a>Your Brand Store</a></div>
-          <h1 class="amz-title">
-            {{ title || 'Tu título del producto aparecerá aquí. Incluye keywords principales, marca y características clave del producto.' }}
-          </h1>
-          <div class="amz-rating">
-            <span class="amz-stars">★★★★☆</span>
-            <span class="amz-reviews">4.2 · 1,247 ratings</span>
+          <h1 class="amz-title">{{ title || 'Tu título del producto aparecerá aquí...' }}</h1>
+
+          <div class="amz-rating" (click)="showRatingBreakdown = !showRatingBreakdown" style="cursor:pointer">
+            <span class="amz-stars" [style.color]="avgRating > 0 ? '#ff9900' : '#ccc'">
+              {{ avgRating > 0 ? getStars(Math.round(avgRating)) : '☆☆☆☆☆' }}
+            </span>
+            <span class="amz-reviews" *ngIf="avgRating > 0">
+              {{ avgRating | number:'1.1-1' }} · {{ totalReviews | number }} ratings
+            </span>
+            <span class="amz-reviews" *ngIf="avgRating === 0" style="color:#888">
+              Sin reviews — genera abajo
+            </span>
             <span class="amz-sep">|</span>
-            <span class="amz-bsr">#128 in Your Category</span>
+            <span class="amz-bsr">#128 in {{ kwFilters.category || 'Your Category' }}</span>
           </div>
+
+          <!-- Rating Breakdown -->
+          <div class="rating-popup" *ngIf="showRatingBreakdown && reviews.length > 0">
+            <div class="rating-popup-header">
+              <span class="rating-big">{{ avgRating | number:'1.1-1' }}</span>
+              <span class="rating-stars-big">{{ getStars(Math.round(avgRating)) }}</span>
+              <span class="rating-total">{{ totalReviews | number }} global ratings</span>
+            </div>
+            <div class="rating-bar" *ngFor="let s of [5,4,3,2,1]">
+              <span class="rating-label">{{ s }} star</span>
+              <div class="rating-track">
+                <div class="rating-fill" [style.width.%]="getRatingPct(s)" [style.background]="getRatingColor(s)"></div>
+              </div>
+              <span class="rating-pct">{{ getRatingPct(s) }}%</span>
+            </div>
+            <button class="rating-close" (click)="showRatingBreakdown = false">Ver reseñas →</button>
+          </div>
+
           <div class="amz-divider-line"></div>
+
           <div class="amz-price-section">
             <span class="amz-price">$24.99</span>
             <span class="amz-price-sub">($12.50 / count)</span>
           </div>
+
           <div class="amz-bullets">
             <div class="amz-bullets-title">About this item</div>
             <ul>
@@ -273,6 +301,7 @@
               <li *ngIf="!bullet1" class="amz-placeholder">✏️ Agrega bullet points en el editor...</li>
             </ul>
           </div>
+
           <div class="amz-variants">
             <div class="amz-variant-label">Size:</div>
             <div class="amz-variant-options">
@@ -283,14 +312,12 @@
           </div>
         </div>
 
+        <!-- Buy Box -->
         <div class="amz-buybox">
           <div class="amz-price-box">$24.99</div>
           <div class="amz-delivery"><span>FREE delivery</span> <strong>Tomorrow</strong></div>
           <div class="amz-stock">In Stock</div>
-          <div class="amz-qty">
-            <label>Quantity:</label>
-            <select disabled><option>1</option></select>
-          </div>
+          <div class="amz-qty"><label>Quantity:</label><select disabled><option>1</option></select></div>
           <button class="amz-btn-cart">Add to Cart</button>
           <button class="amz-btn-buy">Buy Now</button>
           <div class="amz-sold-by">
@@ -300,24 +327,51 @@
         </div>
       </div>
 
+      <!-- Descripción -->
       <div class="amz-description-section">
         <h2>Product Description</h2>
-        <p class="amz-description-text">
-          {{ description || 'La descripción de tu producto aparecerá aquí.' }}
-        </p>
+        <p class="amz-description-text">{{ description || 'La descripción aparecerá aquí...' }}</p>
       </div>
 
+      <!-- Search Terms -->
       <div class="amz-search-terms-section">
-        <h4>🔒 Search Terms — Solo visibles en el backend de Amazon Seller Central</h4>
-        <div class="amz-search-terms-box">
-          {{ searchTerms || 'Tus search terms aparecerán aquí.' }}
-        </div>
+        <h4>🔒 Search Terms — Solo visibles en el backend de Amazon</h4>
+        <div class="amz-search-terms-box">{{ searchTerms || 'Tus search terms aquí...' }}</div>
       </div>
 
-      <div class="amz-keywords-used" *ngIf="selectedKeywords.size > 0">
-        <h4>✅ Keywords incluidas en este listing ({{ selectedKeywords.size }})</h4>
-        <div class="amz-kw-tags">
-          <span class="amz-kw-tag" *ngFor="let kw of selectedKeywordsArray">{{ kw }}</span>
+      <!-- Reviews -->
+      <div class="amz-reviews-section">
+        <div class="reviews-header">
+          <h2>Customer Reviews</h2>
+          <button class="btn-generate-reviews" (click)="generateReviews()" [disabled]="generatingReviews">
+            {{ generatingReviews ? '⏳ Generando...' : '⭐ Generar reviews' }}
+          </button>
+        </div>
+
+        <div class="reviews-empty" *ngIf="reviews.length === 0 && !generatingReviews">
+          <p>Haz click en "Generar reviews" para agregar reseñas ficticias basadas en tu producto.</p>
+        </div>
+
+        <div class="reviews-loading" *ngIf="generatingReviews">
+          <p>⏳ Generando reviews...</p>
+        </div>
+
+        <div class="reviews-list" *ngIf="reviews.length > 0">
+          <div class="review-card" *ngFor="let review of reviews">
+            <div class="review-header">
+              <div class="review-author">
+                <span class="review-avatar">{{ review.author[0] }}</span>
+                <strong>{{ review.author }}</strong>
+              </div>
+              <span class="review-verified" *ngIf="review.verified">✅ Verified Purchase</span>
+            </div>
+            <div class="review-rating" [style.color]="getRatingColor(review.rating)">
+              {{ getStars(review.rating) }}
+            </div>
+            <div class="review-title"><strong>{{ review.title }}</strong></div>
+            <div class="review-date">Reviewed in the United States on {{ review.date }}</div>
+            <div class="review-body">{{ review.body }}</div>
+          </div>
         </div>
       </div>
 

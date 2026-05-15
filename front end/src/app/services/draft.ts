@@ -33,4 +33,8 @@ export class DraftService {
   deleteDraft(id: string): Observable<any> {
     return this.http.delete(`${this.apiUrl}/${id}`, { headers: this.getHeaders() });
   }
+
+  generateReviews(data: any): Observable<any> {
+    return this.http.post(`${this.apiUrl}/generate-reviews`, data, { headers: this.getHeaders() });
+  }
 }

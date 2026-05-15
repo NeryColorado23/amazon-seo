@@ -37,12 +37,7 @@ export class Editor implements OnInit {
   description = '';
   searchTerms = '';
 
-  limits = {
-    title: 200,
-    bullet: 100,
-    description: 2000,
-    searchTerms: 250,
-  };
+  limits = { title: 200, bullet: 100, description: 2000, searchTerms: 250 };
 
   activeTab: 'editor' | 'preview' | 'history' = 'editor';
   drafts: any[] = [];
@@ -52,7 +47,21 @@ export class Editor implements OnInit {
   loadingKeywords = false;
   draftName = '';
 
-  // Keywords encontradas en los textos
+  // Imágenes
+  images: string[] = []; // base64
+  dragOverIndex: number | null = null;
+  dragSourceIndex: number | null = null;
+
+  // Reviews
+  reviews: any[] = [];
+  avgRating = 0;
+  totalReviews = 0;
+  generatingReviews = false;
+  showRatingBreakdown = false;
+  Math = Math;
+
+
+  // Keywords en texto
   usedKeywordsInText: Set<string> = new Set();
 
   constructor(
@@ -71,13 +80,12 @@ export class Editor implements OnInit {
   loadCategories(): void {
     this.keywordService.getKeywordCategories().subscribe({
       next: (cats) => (this.keywordCategories = cats),
-      error: () => {},
     });
   }
 
   loadUploads(): void {
     this.uploadService.getUploads().subscribe({
-      next: (data) => (this.keywordUploads = data.filter((u) => u.type === 'keywords')),
+      next: (data) => (this.keywordUploads = data.filter(u => u.type === 'keywords')),
     });
   }
 
@@ -110,7 +118,100 @@ export class Editor implements OnInit {
     });
   }
 
-  // ── Detección de keywords en los textos ──────────────────────────────────
+  // ── Imágenes ─────────────────────────────────────────────────────────────
+
+  onImageUpload(event: Event, index: number): void {
+    const input = event.target as HTMLInputElement;
+    if (!input.files || input.files.length === 0) return;
+
+    const file = input.files[0];
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const base64 = e.target?.result as string;
+      if (index === -1) {
+        // Agregar nueva
+        if (this.images.length < 7) {
+          this.images.push(base64);
+        }
+      } else {
+        // Reemplazar existente
+        this.images[index] = base64;
+      }
+    };
+    reader.readAsDataURL(file);
+  }
+
+  removeImage(index: number): void {
+    this.images.splice(index, 1);
+  }
+
+  onDragStart(index: number): void {
+    this.dragSourceIndex = index;
+  }
+
+  onDragOver(event: DragEvent, index: number): void {
+    event.preventDefault();
+    this.dragOverIndex = index;
+  }
+
+  onDrop(event: DragEvent, index: number): void {
+    event.preventDefault();
+    if (this.dragSourceIndex === null || this.dragSourceIndex === index) return;
+
+    const moved = this.images.splice(this.dragSourceIndex, 1)[0];
+    this.images.splice(index, 0, moved);
+    this.dragSourceIndex = null;
+    this.dragOverIndex = null;
+  }
+
+  onDragEnd(): void {
+    this.dragSourceIndex = null;
+    this.dragOverIndex = null;
+  }
+
+  // ── Reviews ──────────────────────────────────────────────────────────────
+
+  generateReviews(): void {
+    this.generatingReviews = true;
+    this.draftService.generateReviews({
+      title: this.title,
+      bullet1: this.bullet1,
+      bullet2: this.bullet2,
+      bullet3: this.bullet3,
+      bullet4: this.bullet4,
+      bullet5: this.bullet5,
+      category: this.kwFilters.category,
+    }).subscribe({
+      next: (data: any) => {
+        this.reviews = data.reviews || [];
+        this.avgRating = data.avgRating || 0;
+        this.totalReviews = data.totalReviews || 0;
+        this.generatingReviews = false;
+      },
+      error: () => { this.generatingReviews = false; },
+    });
+  }
+
+  getRatingCount(stars: number): number {
+    return this.reviews.filter(r => r.rating === stars).length;
+  }
+
+  getRatingPct(stars: number): number {
+    if (this.reviews.length === 0) return 0;
+    return Math.round((this.getRatingCount(stars) / this.reviews.length) * 100);
+  }
+
+  getStars(rating: number): string {
+    return '★'.repeat(rating) + '☆'.repeat(5 - rating);
+  }
+
+  getRatingColor(rating: number): string {
+    if (rating >= 4) return '#ff9900';
+    if (rating === 3) return '#ffc107';
+    return '#dc3545';
+  }
+
+  // ── Keywords en texto ────────────────────────────────────────────────────
 
   get allText(): string {
     return [this.title, this.bullet1, this.bullet2, this.bullet3,
@@ -135,13 +236,12 @@ export class Editor implements OnInit {
     this.detectUsedKeywords();
   }
 
-  // Colores por volumen de búsqueda
   getVolumeColor(volume: number): string {
-    if (volume >= 50000) return '#dc2626';   // rojo — muy alto
-    if (volume >= 20000) return '#ea580c';   // naranja — alto
-    if (volume >= 10000) return '#2563eb';   // azul — intermedio
-    if (volume >= 5000)  return '#7c3aed';   // morado — medio-bajo
-    return '#16a34a';                         // verde — bajo
+    if (volume >= 50000) return '#dc2626';
+    if (volume >= 20000) return '#ea580c';
+    if (volume >= 10000) return '#2563eb';
+    if (volume >= 5000)  return '#7c3aed';
+    return '#16a34a';
   }
 
   getVolumeLabel(volume: number): string {
@@ -152,40 +252,25 @@ export class Editor implements OnInit {
     return 'Bajo';
   }
 
-  // Renderizar texto con keywords resaltadas por color
   highlightText(text: string): string {
     if (!text || this.filteredKeywords.length === 0) return this.escapeHtml(text);
-
-    // Ordenar por longitud descendente para que frases largas tengan prioridad
-    const sorted = [...this.filteredKeywords].sort(
-      (a, b) => b.keyword.length - a.keyword.length
-    );
-
+    const sorted = [...this.filteredKeywords].sort((a, b) => b.keyword.length - a.keyword.length);
     let result = this.escapeHtml(text);
-
     sorted.forEach(kw => {
       const escaped = this.escapeHtml(kw.keyword);
       const color = this.getVolumeColor(kw.searchVolume);
       const regex = new RegExp(`(${escaped})`, 'gi');
-      result = result.replace(
-        regex,
+      result = result.replace(regex,
         `<mark style="background:${color}20;color:${color};border-radius:3px;padding:1px 3px;font-weight:600;">$1</mark>`
       );
     });
-
     return result;
   }
 
   escapeHtml(text: string): string {
     if (!text) return '';
-    return text
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;');
+    return text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
-
-  // ── Toggle y campos ──────────────────────────────────────────────────────
 
   toggleKeyword(kw: string): void {
     if (this.selectedKeywords.has(kw)) {
@@ -205,7 +290,6 @@ export class Editor implements OnInit {
       : field === 'description' ? this.limits.description
       : field === 'searchTerms' ? this.limits.searchTerms
       : this.limits.bullet;
-
     const newVal = currentVal ? `${currentVal} ${kw}` : kw;
     if (newVal.length <= limit) {
       (this as any)[field] = newVal;
@@ -219,10 +303,9 @@ export class Editor implements OnInit {
   }
 
   charCount(val: string): number { return val?.length || 0; }
-  charLeft(val: string, limit: number): number { return limit - (val?.length || 0); }
   isOverLimit(val: string, limit: number): boolean { return (val?.length || 0) > limit; }
 
-  // ── Guardar/cargar borradores ────────────────────────────────────────────
+  // ── Borradores ───────────────────────────────────────────────────────────
 
   saveDraft(): void {
     this.saving = true;
@@ -240,6 +323,10 @@ export class Editor implements OnInit {
       description: this.description,
       searchTerms: this.searchTerms,
       keywordsUsed: this.selectedKeywordsArray,
+      images: this.images,
+      reviews: this.reviews,
+      avgRating: this.avgRating,
+      totalReviews: this.totalReviews,
     };
 
     const obs = this.currentDraftId
@@ -262,19 +349,28 @@ export class Editor implements OnInit {
   }
 
   loadDraft(draft: any): void {
-    this.currentDraftId = draft._id;
-    this.draftName = draft.name;
-    this.title = draft.title;
-    this.bullet1 = draft.bullet1;
-    this.bullet2 = draft.bullet2;
-    this.bullet3 = draft.bullet3;
-    this.bullet4 = draft.bullet4;
-    this.bullet5 = draft.bullet5;
-    this.description = draft.description;
-    this.searchTerms = draft.searchTerms;
-    this.selectedKeywords = new Set(draft.keywordsUsed || []);
-    this.activeTab = 'editor';
-    this.detectUsedKeywords();
+    // Cargar borrador completo con imágenes
+    this.draftService.getDraft(draft._id).subscribe({
+      next: (full: any) => {
+        this.currentDraftId = full._id;
+        this.draftName = full.name;
+        this.title = full.title;
+        this.bullet1 = full.bullet1;
+        this.bullet2 = full.bullet2;
+        this.bullet3 = full.bullet3;
+        this.bullet4 = full.bullet4;
+        this.bullet5 = full.bullet5;
+        this.description = full.description;
+        this.searchTerms = full.searchTerms;
+        this.selectedKeywords = new Set(full.keywordsUsed || []);
+        this.images = full.images || [];
+        this.reviews = full.reviews || [];
+        this.avgRating = full.avgRating || 0;
+        this.totalReviews = full.totalReviews || 0;
+        this.activeTab = 'editor';
+        this.detectUsedKeywords();
+      },
+    });
   }
 
   newDraft(): void {
@@ -290,6 +386,10 @@ export class Editor implements OnInit {
     this.searchTerms = '';
     this.selectedKeywords = new Set();
     this.usedKeywordsInText = new Set();
+    this.images = [];
+    this.reviews = [];
+    this.avgRating = 0;
+    this.totalReviews = 0;
     this.activeTab = 'editor';
   }
 

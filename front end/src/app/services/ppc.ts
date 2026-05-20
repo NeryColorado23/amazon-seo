@@ -5,8 +5,8 @@ import { environment } from '../../environments/environment';
 import { AuthService } from './auth';
 
 @Injectable({ providedIn: 'root' })
-export class CostService {
-  private apiUrl = `${environment.apiUrl}/costs`;
+export class PpcService {
+  private apiUrl = `${environment.apiUrl}/ppc`;
 
   constructor(private http: HttpClient, private auth: AuthService) {}
 
@@ -14,20 +14,16 @@ export class CostService {
     return new HttpHeaders({ Authorization: `Bearer ${this.auth.getToken()}` });
   }
 
-  getCosts(filters?: any): Observable<any[]> {
-    return this.http.get<any[]>(this.apiUrl, { headers: this.getHeaders(), params: filters });
+  syncFromSheets(): Observable<any> {
+    return this.http.post(`${this.apiUrl}/sync-sheets`, {}, { headers: this.getHeaders() });
   }
 
-  getCategories(): Observable<string[]> {
-    return this.http.get<string[]>(`${this.apiUrl}/categories`, { headers: this.getHeaders() });
+  getPPC(filters?: any): Observable<any[]> {
+    return this.http.get<any[]>(this.apiUrl, { headers: this.getHeaders(), params: filters });
   }
 
   getStats(): Observable<any> {
     return this.http.get(`${this.apiUrl}/stats`, { headers: this.getHeaders() });
-  }
-
-  deleteUpload(uploadId: string): Observable<any> {
-    return this.http.delete(`${this.apiUrl}/upload/${uploadId}`, { headers: this.getHeaders() });
   }
 
   deleteAll(): Observable<any> {

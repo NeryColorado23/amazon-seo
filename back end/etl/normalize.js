@@ -161,4 +161,64 @@ const normalizeCosts = async (batchId) => {
   }
 };
 
-module.exports = { normalizeSales, normalizeKeywords, normalizeCosts };
+const normalizePPC = async (batchId) => {
+  const client = await pool.connect();
+  try {
+    const raw = await client.query(
+      'SELECT * FROM raw_ppc WHERE batch_id = $1', [batchId]
+    );
+    if (raw.rows.length === 0) return 0;
+
+    const CHUNK = 100;
+    const rows = raw.rows;
+
+    for (let i = 0; i < rows.length; i += CHUNK) {
+      const chunk = rows.slice(i, i + CHUNK);
+      const placeholders = chunk.map((_, idx) => {
+        const b = idx * 15;
+        return `($${b+1},$${b+2},$${b+3},$${b+4},$${b+5},$${b+6},$${b+7},$${b+8},$${b+9},$${b+10},$${b+11},$${b+12},$${b+13},$${b+14},$${b+15})`;
+      }).join(',');
+
+      const flat = chunk.flatMap(row => {
+        const clicks = parseInt(row.clicks) || 0;
+        const impressions = parseInt(row.impressions) || 0;
+        const orders = parseInt(row.orders) || 0;
+        const adSpend = parseFloat(row.ad_spend) || 0;
+        const ctr = impressions > 0 ? parseFloat(((clicks / impressions) * 100).toFixed(2)) : 0;
+        const convRate = clicks > 0 ? parseFloat(((orders / clicks) * 100).toFixed(2)) : 0;
+        const roas = adSpend > 0 ? parseFloat((orders / adSpend * 100).toFixed(2)) : 0;
+
+        return [
+          batchId,
+          row.source || 'google_sheets',
+          row.identifier || '',
+          row.title || '',
+          row.category || '',
+          adSpend,
+          impressions,
+          clicks,
+          orders,
+          parseFloat(row.acos) || 0,
+          parseFloat(row.cpc) || 0,
+          ctr,
+          convRate,
+          roas,
+          false,
+        ];
+      });
+
+      await client.query(
+        `INSERT INTO norm_ppc
+         (batch_id, source, identifier, title, category, ad_spend,
+          impressions, clicks, orders, acos, cpc, ctr, conversion_rate, roas, synced_to_mongo)
+         VALUES ${placeholders}`,
+        flat
+      );
+    }
+    return rows.length;
+  } finally {
+    client.release();
+  }
+};
+
+module.exports = { normalizeSales, normalizeKeywords, normalizeCosts, normalizePPC };

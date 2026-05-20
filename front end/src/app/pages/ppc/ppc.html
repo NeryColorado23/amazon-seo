@@ -1,0 +1,160 @@
+<div class="ppc-container">
+
+  <div class="ppc-header">
+    <div>
+      <h1 class="page-title">📊 PPC & Advertising</h1>
+      <p class="subtitle">Datos de publicidad sincronizados desde Google Sheets</p>
+    </div>
+    <div class="header-actions">
+      <a routerLink="/warehouse" class="btn-warehouse">🔄 Sincronizar en Warehouse</a>
+      <button class="btn btn-danger" (click)="deleteAll()" *ngIf="ppcData.length > 0">🗑️ Borrar todo</button>
+    </div>
+  </div>
+
+  <!-- MÉTRICAS GENERALES -->
+  <div class="metrics-grid" *ngIf="stats && stats.totalProducts > 0">
+    <div class="metric-card">
+      <div class="metric-value">{{ stats.totalProducts || 0 }}</div>
+      <div class="metric-label">Productos con PPC</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-value">${{ stats.totalAdSpend | number:'1.2-2' }}</div>
+      <div class="metric-label">Ad Spend total</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-value">{{ stats.totalImpressions | number }}</div>
+      <div class="metric-label">Impresiones totales</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-value">{{ stats.totalClicks | number }}</div>
+      <div class="metric-label">Clicks totales</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-value">{{ stats.totalOrders | number }}</div>
+      <div class="metric-label">Órdenes por PPC</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-value" [class]="getAcosClass(stats.avgAcos)">
+        {{ stats.avgAcos | number:'1.1-1' }}%
+      </div>
+      <div class="metric-label">ACOS promedio</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-value">${{ stats.avgCpc | number:'1.2-2' }}</div>
+      <div class="metric-label">CPC promedio</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-value" [class]="getRoasClass(stats.avgRoas)">
+        {{ stats.avgRoas | number:'1.2-2' }}x
+      </div>
+      <div class="metric-label">ROAS promedio</div>
+    </div>
+  </div>
+
+  <!-- STATS POR CATEGORÍA -->
+  <div class="card" *ngIf="categoryStats.length > 0">
+    <h2 class="section-title">Rendimiento por categoría</h2>
+    <div class="table-scroll">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Categoría</th>
+            <th>Productos</th>
+            <th>Ad Spend</th>
+            <th>Órdenes</th>
+            <th>ACOS prom.</th>
+            <th>ROAS prom.</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let cat of categoryStats">
+            <td><strong>{{ cat._id }}</strong></td>
+            <td>{{ cat.totalProducts }}</td>
+            <td>${{ cat.totalAdSpend | number:'1.2-2' }}</td>
+            <td>{{ cat.totalOrders | number }}</td>
+            <td><span [class]="getAcosClass(cat.avgAcos)">{{ cat.avgAcos | number:'1.1-1' }}%</span></td>
+            <td><span [class]="getRoasClass(cat.avgRoas)">{{ cat.avgRoas | number:'1.2-2' }}x</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- FILTROS -->
+  <div class="filters-bar" *ngIf="ppcData.length > 0">
+    <div class="filter-group">
+      <label>Categoría</label>
+      <select [(ngModel)]="filters.category" (change)="applyFilters()">
+        <option value="">Todas</option>
+        <option *ngFor="let cat of categories" [value]="cat">{{ cat }}</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label>Ordenar por</label>
+      <select [(ngModel)]="filters.sortBy" (change)="applyFilters()">
+        <option value="adSpend">Ad Spend</option>
+        <option value="acos">ACOS</option>
+        <option value="roas">ROAS</option>
+        <option value="orders">Órdenes</option>
+        <option value="clicks">Clicks</option>
+        <option value="impressions">Impresiones</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label>Orden</label>
+      <select [(ngModel)]="filters.order" (change)="applyFilters()">
+        <option value="desc">Mayor a menor</option>
+        <option value="asc">Menor a mayor</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- TABLA -->
+  <div class="card" *ngIf="ppcData.length > 0">
+    <h2 class="section-title">Productos ({{ ppcData.length }})</h2>
+    <div class="table-scroll">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>SKU</th>
+            <th>Título</th>
+            <th>Categoría</th>
+            <th>Ad Spend</th>
+            <th>Impresiones</th>
+            <th>Clicks</th>
+            <th>CTR</th>
+            <th>Órdenes</th>
+            <th>Conv. Rate</th>
+            <th>ACOS</th>
+            <th>CPC</th>
+            <th>ROAS</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let item of ppcData">
+            <td class="asin">{{ item.identifier }}</td>
+            <td class="title-cell">{{ item.title }}</td>
+            <td>{{ item.category }}</td>
+            <td>${{ item.adSpend | number:'1.2-2' }}</td>
+            <td>{{ item.impressions | number }}</td>
+            <td>{{ item.clicks | number }}</td>
+            <td>{{ item.ctr | number:'1.2-2' }}%</td>
+            <td><strong>{{ item.orders }}</strong></td>
+            <td>{{ item.conversionRate | number:'1.2-2' }}%</td>
+            <td><span [class]="getAcosClass(item.acos)">{{ item.acos | number:'1.1-1' }}%</span></td>
+            <td>${{ item.cpc | number:'1.2-2' }}</td>
+            <td><span [class]="getRoasClass(item.roas)">{{ item.roas | number:'1.2-2' }}x</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- VACÍO -->
+  <div class="card empty-state" *ngIf="ppcData.length === 0 && !loading">
+    <span class="empty-icon">📊</span>
+    <h2>No hay datos de PPC</h2>
+    <p>Ve al <a routerLink="/warehouse">Warehouse</a> y sincroniza desde Google Sheets.</p>
+  </div>
+
+</div>

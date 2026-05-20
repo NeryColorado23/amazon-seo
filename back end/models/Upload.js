@@ -1,14 +1,10 @@
 const mongoose = require('mongoose');
 
 const uploadSchema = new mongoose.Schema({
-  userId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true,
-  },
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   type: {
     type: String,
-    enum: ['listings', 'keywords', 'costs'],
+    enum: ['listings', 'keywords', 'costs', 'ppc'],
     required: true,
   },
   fileName: { type: String, default: '' },

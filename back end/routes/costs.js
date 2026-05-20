@@ -1,5 +1,6 @@
 const express = require('express');
 const CostInventory = require('../models/CostInventory');
+const Upload = require('../models/Upload');
 const auth = require('../middleware/auth');
 
 const router = express.Router();
@@ -9,14 +10,11 @@ router.get('/', auth, async (req, res) => {
   try {
     const { category, stockStatus, uploadId, sortBy, order } = req.query;
     let query = { userId: req.user.id };
-
     if (category) query.category = category;
     if (stockStatus) query.stockStatus = stockStatus;
     if (uploadId) query.uploadId = uploadId;
-
     let sortOption = {};
     sortOption[sortBy || 'fbaStock'] = order === 'asc' ? 1 : -1;
-
     const costs = await CostInventory.find(query).sort(sortOption);
     return res.json(costs);
   } catch (error) {
@@ -72,6 +70,28 @@ router.get('/stats', auth, async (req, res) => {
     ]);
 
     return res.json({ totals: stats[0] || {}, byCategory });
+  } catch (error) {
+    return res.status(500).json({ message: 'Error del servidor', error: error.message });
+  }
+});
+
+// DELETE /api/costs/upload/:uploadId — borrar una carga específica
+router.delete('/upload/:uploadId', auth, async (req, res) => {
+  try {
+    await CostInventory.deleteMany({ userId: req.user.id, uploadId: req.params.uploadId });
+    await Upload.findOneAndDelete({ _id: req.params.uploadId, userId: req.user.id });
+    return res.json({ message: 'Carga eliminada correctamente.' });
+  } catch (error) {
+    return res.status(500).json({ message: 'Error del servidor', error: error.message });
+  }
+});
+
+// DELETE /api/costs/all — borrar todo
+router.delete('/all', auth, async (req, res) => {
+  try {
+    await CostInventory.deleteMany({ userId: req.user.id });
+    await Upload.deleteMany({ userId: req.user.id, type: 'costs' });
+    return res.json({ message: 'Todo el inventario eliminado.' });
   } catch (error) {
     return res.status(500).json({ message: 'Error del servidor', error: error.message });
   }

@@ -103,7 +103,7 @@
     </div>
   </div>
 
-  <!-- FILTROS -->
+<!-- FILTROS -->
   <div class="filters-bar" *ngIf="costs.length > 0">
     <div class="filter-group">
       <label>Categoría</label>
@@ -137,6 +137,7 @@
         <option value="desc">Mayor a menor</option>
       </select>
     </div>
+    <button class="btn btn-danger" (click)="deleteAll()">🗑️ Borrar todo</button>
   </div>
 
   <!-- TABLA -->

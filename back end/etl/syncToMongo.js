@@ -2,6 +2,7 @@ const pool = require('../config/postgres');
 const Listing = require('../models/Listing');
 const Keyword = require('../models/Keyword');
 const CostInventory = require('../models/CostInventory');
+const PPC = require('../models/PPC');
 const Upload = require('../models/Upload');
 
 const syncListingsToMongo = async (batchId, userId) => {
@@ -100,14 +101,10 @@ const syncKeywordsToMongo = async (batchId, userId) => {
 const syncCostsToMongo = async (batchId, userId) => {
   const client = await pool.connect();
   try {
-    console.log('Buscando costs con batch_id:', batchId);
-
     const result = await client.query(
-      `SELECT * FROM norm_costs WHERE batch_id = $1 AND synced_to_mongo = false`,
+      'SELECT * FROM norm_costs WHERE batch_id = $1 AND synced_to_mongo = false',
       [batchId]
     );
-
-    console.log('Costs encontrados en Supabase:', result.rows.length);
 
     if (result.rows.length === 0) return 0;
 
@@ -119,40 +116,86 @@ const syncCostsToMongo = async (batchId, userId) => {
     });
     await uploadRecord.save();
 
-    const costs = result.rows.map(row => {
-      console.log('Row sample:', JSON.stringify(row).slice(0, 100));
-      return {
-        userId,
-        uploadId: uploadRecord._id,
-        identifier: row.identifier || '',
-        title: row.title || '',
-        category: row.category || '',
-        cogs: parseFloat(row.cogs) || 0,
-        salePrice: parseFloat(row.sale_price) || 0,
-        margin: parseFloat(row.margin) || 0,
-        marginPct: parseFloat(row.margin_pct) || 0,
-        fbaStock: parseInt(row.fba_stock) || 0,
-        reorderPoint: parseInt(row.reorder_point) || 0,
-        stockStatus: row.stock_status || 'out',
-        leadTimeDays: parseInt(row.lead_time_days) || 0,
-        supplier: row.supplier || '',
-      };
-    });
-
-    console.log('Primer cost a insertar:', JSON.stringify(costs[0]));
+    const costs = result.rows.map(row => ({
+      userId,
+      uploadId: uploadRecord._id,
+      identifier: row.identifier || '',
+      title: row.title || '',
+      category: row.category || '',
+      cogs: parseFloat(row.cogs) || 0,
+      salePrice: parseFloat(row.sale_price) || 0,
+      margin: parseFloat(row.margin) || 0,
+      marginPct: parseFloat(row.margin_pct) || 0,
+      fbaStock: parseInt(row.fba_stock) || 0,
+      reorderPoint: parseInt(row.reorder_point) || 0,
+      stockStatus: row.stock_status || 'out',
+      leadTimeDays: parseInt(row.lead_time_days) || 0,
+      supplier: row.supplier || '',
+    }));
 
     await CostInventory.insertMany(costs);
 
     await client.query(
-      `UPDATE norm_costs SET synced_to_mongo = true WHERE batch_id = $1`,
+      'UPDATE norm_costs SET synced_to_mongo = true WHERE batch_id = $1',
       [batchId]
     );
 
-    console.log('Sync costs completado:', costs.length);
     return costs.length;
   } finally {
     client.release();
   }
 };
 
-module.exports = { syncListingsToMongo, syncKeywordsToMongo, syncCostsToMongo };
+const syncPPCToMongo = async (batchId, userId) => {
+  const client = await pool.connect();
+  try {
+    const result = await client.query(
+      'SELECT * FROM norm_ppc WHERE batch_id = $1 AND synced_to_mongo = false',
+      [batchId]
+    );
+    if (result.rows.length === 0) return 0;
+
+    const uploadRecord = new Upload({
+      userId,
+      type: 'ppc',
+      fileName: `Google Sheets PPC sync - ${new Date().toLocaleDateString('es-GT')}`,
+      recordCount: result.rows.length,
+    });
+    await uploadRecord.save();
+
+    const ppcData = result.rows.map(row => ({
+      userId,
+      uploadId: uploadRecord._id,
+      identifier: row.identifier,
+      title: row.title,
+      category: row.category,
+      adSpend: parseFloat(row.ad_spend) || 0,
+      impressions: parseInt(row.impressions) || 0,
+      clicks: parseInt(row.clicks) || 0,
+      orders: parseInt(row.orders) || 0,
+      acos: parseFloat(row.acos) || 0,
+      cpc: parseFloat(row.cpc) || 0,
+      ctr: parseFloat(row.ctr) || 0,
+      conversionRate: parseFloat(row.conversion_rate) || 0,
+      roas: parseFloat(row.roas) || 0,
+    }));
+
+    await PPC.insertMany(ppcData);
+
+    await client.query(
+      'UPDATE norm_ppc SET synced_to_mongo = true WHERE batch_id = $1',
+      [batchId]
+    );
+
+    return ppcData.length;
+  } finally {
+    client.release();
+  }
+};
+
+module.exports = {
+  syncListingsToMongo,
+  syncKeywordsToMongo,
+  syncCostsToMongo,
+  syncPPCToMongo,
+};

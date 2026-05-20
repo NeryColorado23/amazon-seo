@@ -8,6 +8,7 @@ import { Editor } from './pages/editor/editor';
 import { Reset } from './pages/reset/reset';
 import { Warehouse } from './pages/warehouse/warehouse';
 import { Inventory } from './pages/inventory/inventory';
+import { PpcPage } from './pages/ppc/ppc';
 
 export const routes: Routes = [
   { path: '', redirectTo: '/login', pathMatch: 'full' },
@@ -16,8 +17,9 @@ export const routes: Routes = [
   { path: 'reset', component: Reset },
   { path: 'dashboard', component: Dashboard, canActivate: [authGuard] },
   { path: 'keywords', component: Keywords, canActivate: [authGuard] },
+  { path: 'inventory', component: Inventory, canActivate: [authGuard] },
   { path: 'editor', component: Editor, canActivate: [authGuard] },
   { path: 'warehouse', component: Warehouse, canActivate: [authGuard] },
-  { path: 'inventory', component: Inventory, canActivate: [authGuard] },
+  { path: 'ppc', component: PpcPage, canActivate: [authGuard] },
   { path: '**', redirectTo: '/login' },
 ];

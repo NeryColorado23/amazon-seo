@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { EtlService } from '../../services/etl';
+import { PpcService } from '../../services/ppc';
 import { FileUpload } from '../../components/file-upload/file-upload';
 
 @Component({
@@ -17,18 +18,24 @@ export class Warehouse implements OnInit {
   uploadingSales = false;
   uploadingKeywords = false;
   uploadingCosts = false;
+  syncingSheets = false;
 
   salesResult: any = null;
   keywordsResult: any = null;
   costsResult: any = null;
+  sheetsResult: any = null;
 
   salesError = '';
   keywordsError = '';
   costsError = '';
+  sheetsError = '';
 
   loadingLogs = false;
 
-  constructor(private etlService: EtlService) {}
+  constructor(
+    private etlService: EtlService,
+    private ppcService: PpcService,
+  ) {}
 
   ngOnInit(): void { this.loadLogs(); }
 
@@ -70,6 +77,16 @@ export class Warehouse implements OnInit {
     });
   }
 
+  onSyncSheets(): void {
+    this.syncingSheets = true;
+    this.sheetsResult = null;
+    this.sheetsError = '';
+    this.ppcService.syncFromSheets().subscribe({
+      next: (res) => { this.sheetsResult = res; this.syncingSheets = false; this.loadLogs(); },
+      error: (err) => { this.sheetsError = err.error?.message || 'Error al sincronizar'; this.syncingSheets = false; },
+    });
+  }
+
   getStatusClass(status: string): string {
     if (status === 'completed') return 'status-ok';
     if (status === 'error') return 'status-error';
@@ -86,6 +103,7 @@ export class Warehouse implements OnInit {
     if (type === 'listings') return 'type-listings';
     if (type === 'keywords') return 'type-keywords';
     if (type === 'costs') return 'type-costs';
+    if (type === 'ppc') return 'type-ppc';
     return '';
   }
 

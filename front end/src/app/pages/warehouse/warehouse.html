@@ -4,11 +4,12 @@
   <div class="warehouse-header">
     <div>
       <h1>🏭 Data Warehouse</h1>
-      <p class="subtitle">Pipeline ETL: Excel → Supabase (PostgreSQL) → MongoDB → Tu App</p>
+      <p class="subtitle">Pipeline ETL: Excel + Google Sheets → Supabase (PostgreSQL) → MongoDB → Tu App</p>
     </div>
     <div class="header-links">
       <a routerLink="/dashboard" class="btn-link">📊 Ver Dashboard</a>
       <a routerLink="/keywords" class="btn-link">🔍 Ver Keywords</a>
+      <a routerLink="/ppc" class="btn-link">📊 Ver PPC</a>
     </div>
   </div>
 
@@ -16,8 +17,8 @@
   <div class="architecture-card">
     <div class="arch-step">
       <div class="arch-icon">📂</div>
-      <div class="arch-label">3 Fuentes</div>
-      <div class="arch-desc">Ventas · Keywords · Costos</div>
+      <div class="arch-label">4 Fuentes</div>
+      <div class="arch-desc">Ventas · Keywords · Costos · PPC</div>
     </div>
     <div class="arch-arrow">→</div>
     <div class="arch-step">
@@ -41,17 +42,17 @@
     <div class="arch-step">
       <div class="arch-icon">📊</div>
       <div class="arch-label">Tu App</div>
-      <div class="arch-desc">Dashboard · Keywords · Editor</div>
+      <div class="arch-desc">Dashboard · Keywords · PPC · Editor</div>
     </div>
   </div>
 
-  <!-- FUENTES — 3 cards -->
+  <!-- FUENTES -->
   <div class="sources-title">
     <h2>📥 Fuentes de datos</h2>
-    <p>Sube cada archivo para iniciar el pipeline ETL</p>
+    <p>Sube cada archivo o sincroniza para iniciar el pipeline ETL</p>
   </div>
 
-  <div class="upload-grid-3">
+  <div class="upload-grid-4">
 
     <!-- FUENTE 1: Ventas -->
     <div class="upload-card source-1">
@@ -146,6 +147,40 @@
         </div>
       </div>
       <div class="etl-result error" *ngIf="costsError">❌ {{ costsError }}</div>
+    </div>
+
+    <!-- FUENTE 4: Google Sheets PPC -->
+    <div class="upload-card source-4">
+      <div class="source-badge source-badge-4">Fuente 4</div>
+      <div class="upload-card-header">
+        <span class="upload-card-icon">📊</span>
+        <div>
+          <h2>Google Sheets — PPC</h2>
+          <p>Datos de publicidad en tiempo real</p>
+        </div>
+      </div>
+      <div class="columns-hint">
+        <strong>Conectado a:</strong> Amazon PPC Data - March 2026<br>
+        <strong>Columnas:</strong> Identifier, Title, Category, Ad Spend, Impressions, Clicks, Orders, ACOS, CPC
+      </div>
+
+      <button class="btn-sync-sheets" (click)="onSyncSheets()" [disabled]="syncingSheets">
+        <span *ngIf="!syncingSheets">🔄 Sincronizar desde Google Sheets</span>
+        <span *ngIf="syncingSheets">⏳ Sincronizando...</span>
+      </button>
+
+      <div class="etl-result success" *ngIf="sheetsResult">
+        <div class="result-title">{{ sheetsResult.message }}</div>
+        <div class="result-stats">
+          <div class="stat"><span class="stat-num">{{ sheetsResult.stats.raw }}</span><span class="stat-label">Raw</span></div>
+          <div class="stat-arrow">→</div>
+          <div class="stat"><span class="stat-num">{{ sheetsResult.stats.normalized }}</span><span class="stat-label">Norm.</span></div>
+          <div class="stat-arrow">→</div>
+          <div class="stat"><span class="stat-num">{{ sheetsResult.stats.synced }}</span><span class="stat-label">MongoDB</span></div>
+        </div>
+        <a routerLink="/ppc" class="btn-goto">Ver PPC →</a>
+      </div>
+      <div class="etl-result error" *ngIf="sheetsError">❌ {{ sheetsError }}</div>
     </div>
 
   </div>

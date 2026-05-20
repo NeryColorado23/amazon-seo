@@ -68,13 +68,11 @@ export class Inventory implements OnInit {
     });
   }
 
-  onUploadSelected(): void {
-    this.loadData();
-  }
+  onUploadSelected(): void { this.loadData(); }
 
   deleteUpload(upload: any): void {
     if (confirm(`¿Eliminar "${upload.fileName}" y sus ${upload.recordCount} registros?`)) {
-      this.uploadService.deleteUpload(upload._id).subscribe({
+      this.costService.deleteUpload(upload._id).subscribe({
         next: () => {
           if (this.selectedUploadId === upload._id) this.selectedUploadId = '';
           this.loadUploads();
@@ -84,9 +82,22 @@ export class Inventory implements OnInit {
     }
   }
 
-  applyFilters(): void {
-    this.loadData();
+  deleteAll(): void {
+    if (confirm('¿Eliminar TODO el inventario?')) {
+      this.costService.deleteAll().subscribe({
+        next: () => {
+          this.costs = [];
+          this.uploads = [];
+          this.categories = [];
+          this.stats = null;
+          this.categoryStats = [];
+          this.selectedUploadId = '';
+        },
+      });
+    }
   }
+
+  applyFilters(): void { this.loadData(); }
 
   getStockClass(status: string): string {
     if (status === 'ok') return 'stock-ok';

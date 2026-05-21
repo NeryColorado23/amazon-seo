@@ -1,2 +1,4 @@
 node_modules/
 .env
+echo "google-credentials.json" >> "back end/.gitignore"
+echo ".env" >> "back end/.gitignore"

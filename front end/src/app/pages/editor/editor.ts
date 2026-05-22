@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { KeywordService } from '../../services/keyword';
 import { UploadService } from '../../services/upload';
 import { DraftService } from '../../services/draft';
+import { AiService } from '../../services/ai';
 
 @Component({
   selector: 'app-editor',
@@ -48,7 +49,7 @@ export class Editor implements OnInit {
   draftName = '';
 
   // Imágenes
-  images: string[] = []; // base64
+  images: string[] = [];
   dragOverIndex: number | null = null;
   dragSourceIndex: number | null = null;
 
@@ -60,14 +61,25 @@ export class Editor implements OnInit {
   showRatingBreakdown = false;
   Math = Math;
 
-
   // Keywords en texto
   usedKeywordsInText: Set<string> = new Set();
+
+  // ── IA ──────────────────────────────────────────────────────────────
+  generatingListing = false;
+  scoringListing = false;
+  aiScore: any = null;
+  showAiPanel = false;
+  showScorePanel = false;
+  aiProductType = '';
+  aiExtraInfo = '';
+  aiError = '';
+  scoreError = '';
 
   constructor(
     private keywordService: KeywordService,
     private uploadService: UploadService,
     private draftService: DraftService,
+    private aiService: AiService,
   ) {}
 
   ngOnInit(): void {
@@ -123,31 +135,22 @@ export class Editor implements OnInit {
   onImageUpload(event: Event, index: number): void {
     const input = event.target as HTMLInputElement;
     if (!input.files || input.files.length === 0) return;
-
     const file = input.files[0];
     const reader = new FileReader();
     reader.onload = (e) => {
       const base64 = e.target?.result as string;
       if (index === -1) {
-        // Agregar nueva
-        if (this.images.length < 7) {
-          this.images.push(base64);
-        }
+        if (this.images.length < 7) this.images.push(base64);
       } else {
-        // Reemplazar existente
         this.images[index] = base64;
       }
     };
     reader.readAsDataURL(file);
   }
 
-  removeImage(index: number): void {
-    this.images.splice(index, 1);
-  }
+  removeImage(index: number): void { this.images.splice(index, 1); }
 
-  onDragStart(index: number): void {
-    this.dragSourceIndex = index;
-  }
+  onDragStart(index: number): void { this.dragSourceIndex = index; }
 
   onDragOver(event: DragEvent, index: number): void {
     event.preventDefault();
@@ -157,7 +160,6 @@ export class Editor implements OnInit {
   onDrop(event: DragEvent, index: number): void {
     event.preventDefault();
     if (this.dragSourceIndex === null || this.dragSourceIndex === index) return;
-
     const moved = this.images.splice(this.dragSourceIndex, 1)[0];
     this.images.splice(index, 0, moved);
     this.dragSourceIndex = null;
@@ -232,9 +234,7 @@ export class Editor implements OnInit {
     return this.usedKeywordsInText.has(kw.toLowerCase());
   }
 
-  onTextChange(): void {
-    this.detectUsedKeywords();
-  }
+  onTextChange(): void { this.detectUsedKeywords(); }
 
   getVolumeColor(volume: number): string {
     if (volume >= 50000) return '#dc2626';
@@ -280,9 +280,7 @@ export class Editor implements OnInit {
     }
   }
 
-  isSelected(kw: string): boolean {
-    return this.selectedKeywords.has(kw);
-  }
+  isSelected(kw: string): boolean { return this.selectedKeywords.has(kw); }
 
   addToField(kw: string, field: string): void {
     const currentVal = (this as any)[field] as string;
@@ -298,12 +296,99 @@ export class Editor implements OnInit {
     }
   }
 
-  get selectedKeywordsArray(): string[] {
-    return Array.from(this.selectedKeywords);
-  }
-
+  get selectedKeywordsArray(): string[] { return Array.from(this.selectedKeywords); }
   charCount(val: string): number { return val?.length || 0; }
   isOverLimit(val: string, limit: number): boolean { return (val?.length || 0) > limit; }
+
+  // ── IA: Generar listing ──────────────────────────────────────────────────
+
+  generateWithAI(): void {
+    this.generatingListing = true;
+    this.aiError = '';
+
+    this.aiService.generateListing({
+      category: this.kwFilters.category,
+      productType: this.aiProductType,
+      extraInfo: this.aiExtraInfo,
+      keywords: this.filteredKeywords.slice(0, 20).map(k => `${k.keyword} (vol: ${k.searchVolume})`),
+    }).subscribe({
+      next: (res: any) => {
+        const l = res.listing;
+        this.title = l.title || '';
+        this.bullet1 = l.bullet1 || '';
+        this.bullet2 = l.bullet2 || '';
+        this.bullet3 = l.bullet3 || '';
+        this.bullet4 = l.bullet4 || '';
+        this.bullet5 = l.bullet5 || '';
+        this.description = l.description || '';
+        this.searchTerms = l.searchTerms || '';
+        if (l.keywordsUsed) {
+          l.keywordsUsed.forEach((k: string) => this.selectedKeywords.add(k));
+        }
+        this.detectUsedKeywords();
+        this.generatingListing = false;
+        this.showAiPanel = false;
+      },
+      error: (err: any) => {
+        this.aiError = err.error?.message || 'Error generando listing';
+        this.generatingListing = false;
+      },
+    });
+  }
+
+  // ── IA: Analizar listing ─────────────────────────────────────────────────
+
+  scoreWithAI(): void {
+    if (!this.title) {
+      this.scoreError = 'Necesitas al menos el título para analizar.';
+      return;
+    }
+    this.scoringListing = true;
+    this.scoreError = '';
+    this.aiScore = null;
+
+    this.aiService.scoreListing({
+      title: this.title,
+      bullet1: this.bullet1,
+      bullet2: this.bullet2,
+      bullet3: this.bullet3,
+      bullet4: this.bullet4,
+      bullet5: this.bullet5,
+      description: this.description,
+      searchTerms: this.searchTerms,
+      category: this.kwFilters.category,
+    }).subscribe({
+      next: (res: any) => {
+        this.aiScore = res.analysis;
+        this.scoringListing = false;
+        this.showScorePanel = true;
+      },
+      error: (err: any) => {
+        this.scoreError = err.error?.message || 'Error analizando listing';
+        this.scoringListing = false;
+      },
+    });
+  }
+
+  getGradeColor(grade: string): string {
+    if (grade === 'A+' || grade === 'A') return '#16a34a';
+    if (grade === 'B') return '#1a73e8';
+    if (grade === 'C') return '#d97706';
+    return '#dc2626';
+  }
+
+  getScoreColor(score: number): string {
+    if (score >= 80) return '#16a34a';
+    if (score >= 65) return '#1a73e8';
+    if (score >= 50) return '#d97706';
+    return '#dc2626';
+  }
+
+  getPriorityClass(priority: string): string {
+    if (priority === 'alta') return 'priority-high';
+    if (priority === 'media') return 'priority-mid';
+    return 'priority-low';
+  }
 
   // ── Borradores ───────────────────────────────────────────────────────────
 
@@ -349,7 +434,6 @@ export class Editor implements OnInit {
   }
 
   loadDraft(draft: any): void {
-    // Cargar borrador completo con imágenes
     this.draftService.getDraft(draft._id).subscribe({
       next: (full: any) => {
         this.currentDraftId = full._id;
@@ -390,6 +474,9 @@ export class Editor implements OnInit {
     this.reviews = [];
     this.avgRating = 0;
     this.totalReviews = 0;
+    this.showAiPanel = false;
+    this.showScorePanel = false;
+    this.aiScore = null;
     this.activeTab = 'editor';
   }
 
@@ -411,7 +498,5 @@ export class Editor implements OnInit {
     });
   }
 
-  applyFilters(): void {
-    this.loadKeywords();
-  }
+  applyFilters(): void { this.loadKeywords(); }
 }

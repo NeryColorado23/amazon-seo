@@ -114,6 +114,135 @@
 
     <!-- PANEL DERECHO -->
     <div class="listing-panel">
+
+      <!-- BOTONES IA -->
+      <div class="ai-bar">
+        <button class="btn-ai-generate" (click)="showAiPanel = !showAiPanel" [disabled]="generatingListing">
+          {{ showAiPanel ? '✕ Cerrar IA' : '✨ Generar listing con IA' }}
+        </button>
+        <button class="btn-ai-score" (click)="scoreWithAI()" [disabled]="scoringListing || !title">
+          {{ scoringListing ? '⏳ Analizando...' : '🎯 Analizar y puntuar listing' }}
+        </button>
+      </div>
+
+      <!-- PANEL GENERAR CON IA -->
+      <div class="ai-panel" *ngIf="showAiPanel">
+        <div class="ai-panel-header">
+          <h3>✨ Generar Listing con IA</h3>
+          <p>La IA usará las keywords de la categoría seleccionada para crear un listing optimizado</p>
+        </div>
+        <div class="ai-panel-body">
+          <div class="ai-field">
+            <label>Categoría seleccionada</label>
+            <div class="ai-category-badge">
+              {{ kwFilters.category || 'Selecciona una categoría en el panel izquierdo' }}
+            </div>
+          </div>
+          <div class="ai-field">
+            <label>Tipo de producto <span class="optional">(opcional)</span></label>
+            <input type="text" [(ngModel)]="aiProductType"
+              placeholder="Ej: Kitchen towels cotton, Organic coffee beans, Protein snacks..." />
+          </div>
+          <div class="ai-field">
+            <label>Información adicional <span class="optional">(opcional)</span></label>
+            <textarea [(ngModel)]="aiExtraInfo" rows="2"
+              placeholder="Ej: Pack de 4, para regalo, orgánico, color blanco..."></textarea>
+          </div>
+          <div class="ai-keywords-preview" *ngIf="filteredKeywords.length > 0">
+            <label>Keywords que usará la IA (top {{ filteredKeywords.length > 15 ? 15 : filteredKeywords.length }})</label>
+            <div class="ai-kw-chips">
+              <span class="ai-kw-chip" *ngFor="let kw of filteredKeywords.slice(0, 15)"
+                [style.border-color]="getVolumeColor(kw.searchVolume)">
+                {{ kw.keyword }}
+              </span>
+            </div>
+          </div>
+          <div class="ai-warning" *ngIf="!kwFilters.category">
+            ⚠️ Selecciona una categoría en el panel izquierdo para mejores resultados
+          </div>
+          <div class="ai-error" *ngIf="aiError">❌ {{ aiError }}</div>
+          <button class="btn-ai-submit" (click)="generateWithAI()" [disabled]="generatingListing">
+            <span *ngIf="!generatingListing">✨ Generar listing completo</span>
+            <span *ngIf="generatingListing">⏳ Generando... puede tomar 10-20 segundos</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- PANEL SCORE IA -->
+      <div class="score-panel" *ngIf="showScorePanel && aiScore">
+        <div class="score-panel-header">
+          <div class="score-grade" [style.color]="getGradeColor(aiScore.grade)">
+            {{ aiScore.grade }}
+          </div>
+          <div class="score-info">
+            <div class="score-number" [style.color]="getScoreColor(aiScore.overallScore)">
+              {{ aiScore.overallScore }}/100
+            </div>
+            <div class="score-summary">{{ aiScore.summary }}</div>
+          </div>
+          <button class="score-close" (click)="showScorePanel = false">✕</button>
+        </div>
+
+        <!-- Scores por sección -->
+        <div class="score-sections">
+          <div class="score-section-item" *ngFor="let item of [
+            {key: 'title', label: '📝 Título'},
+            {key: 'bullets', label: '• Bullets'},
+            {key: 'description', label: '📄 Descripción'},
+            {key: 'searchTerms', label: '🔍 Search Terms'},
+            {key: 'keywords', label: '🔑 Keywords'},
+            {key: 'conversion', label: '💰 Conversión'}
+          ]">
+            <div class="ss-label">{{ item.label }}</div>
+            <div class="ss-bar-track">
+              <div class="ss-bar-fill"
+                [style.width.%]="aiScore.scores[item.key]?.score"
+                [style.background]="getScoreColor(aiScore.scores[item.key]?.score)">
+              </div>
+            </div>
+            <div class="ss-score" [style.color]="getScoreColor(aiScore.scores[item.key]?.score)">
+              {{ aiScore.scores[item.key]?.score }}
+            </div>
+            <div class="ss-feedback">{{ aiScore.scores[item.key]?.feedback }}</div>
+          </div>
+        </div>
+
+        <!-- Keyword coverage -->
+        <div class="kw-coverage">
+          <span>🔑 Keywords de tu BD usadas: <strong>{{ aiScore.keywordCoverage }}/{{ aiScore.totalKeywordsAvailable }}</strong></span>
+        </div>
+
+        <!-- Fortalezas -->
+        <div class="score-strengths" *ngIf="aiScore.strengths?.length > 0">
+          <h4>✅ Fortalezas</h4>
+          <div class="strength-item" *ngFor="let s of aiScore.strengths">{{ s }}</div>
+        </div>
+
+        <!-- Mejoras -->
+        <div class="score-improvements" *ngIf="aiScore.improvements?.length > 0">
+          <h4>💡 Mejoras recomendadas</h4>
+          <div class="improvement-item" *ngFor="let imp of aiScore.improvements"
+            [class]="getPriorityClass(imp.priority)">
+            <span class="imp-priority">{{ imp.priority | uppercase }}</span>
+            <div>
+              <strong>{{ imp.area }}</strong>
+              <p>{{ imp.suggestion }}</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Keywords faltantes -->
+        <div class="missing-kws" *ngIf="aiScore.missingKeywords?.length > 0">
+          <h4>⚠️ Keywords importantes no usadas</h4>
+          <div class="missing-kw-chips">
+            <span class="missing-chip" *ngFor="let kw of aiScore.missingKeywords">{{ kw }}</span>
+          </div>
+        </div>
+
+        <div class="score-error" *ngIf="scoreError">❌ {{ scoreError }}</div>
+      </div>
+
+      <!-- TÍTULO -->
       <div class="field-group">
         <div class="field-header">
           <label>Título</label>
@@ -137,6 +266,7 @@
         </div>
       </div>
 
+      <!-- BULLET POINTS -->
       <div class="field-group" *ngFor="let n of [1,2,3,4,5]">
         <div class="field-header">
           <label>Bullet Point #{{ n }}</label>
@@ -155,6 +285,7 @@
         </div>
       </div>
 
+      <!-- DESCRIPCIÓN -->
       <div class="field-group">
         <div class="field-header">
           <label>Descripción</label>
@@ -170,6 +301,7 @@
         </div>
       </div>
 
+      <!-- SEARCH TERMS -->
       <div class="field-group">
         <div class="field-header">
           <label>Search Terms (Backend)</label>
@@ -185,6 +317,7 @@
         </div>
         <div class="field-hint">Máximo 250 bytes. No usar comas, no repetir keywords ya usadas.</div>
       </div>
+
     </div>
   </div>
 

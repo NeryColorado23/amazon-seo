@@ -27,6 +27,7 @@ app.use('/api/etl', require('./routes/etl'));
 app.use('/api/costs', require('./routes/costs'));
 app.use('/api/ppc', require('./routes/ppc'));
 app.use('/api/overview', require('./routes/overview'));
+app.use('/api/ai', require('./routes/ai'));
 
 app.get('/', (req, res) => {
   res.json({ message: 'Amazon SEO API funcionando correctamente', status: 'ok' });

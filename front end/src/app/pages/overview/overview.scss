@@ -299,3 +299,44 @@
   p { color: #888; font-size: 14px; }
   a { color: #1a73e8; }
 }
+
+// ── Charts Section ──
+.charts-section {
+  margin-bottom: 24px;
+}
+
+.charts-section-header {
+  display: flex; align-items: center; gap: 12px; margin-bottom: 16px;
+  h2 { font-size: 18px; font-weight: 700; color: #1a1a2e; }
+  .charts-subtitle { font-size: 13px; color: #888; }
+}
+
+.charts-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.chart-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.chart-wide { grid-column: 1 / 2; }
+.chart-full { grid-column: 1 / -1; }
+
+.chart-header {
+  display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;
+  h3 { font-size: 14px; font-weight: 700; color: #1a1a2e; }
+}
+
+.chart-badge {
+  font-size: 11px; color: #888;
+  background: #f0f0f0; padding: 3px 8px; border-radius: 10px;
+}
+
+.chart-body { height: 260px; }
+.chart-body-tall { height: 320px; }

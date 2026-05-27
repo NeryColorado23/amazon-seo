@@ -11,7 +11,7 @@
     </div>
   </div>
 
-  <!-- KPIs PRINCIPALES -->
+  <!-- KPIs -->
   <div class="kpi-grid" *ngIf="stats">
     <div class="kpi-card">
       <div class="kpi-icon">📦</div>
@@ -51,7 +51,7 @@
     <div class="kpi-card">
       <div class="kpi-icon">📈</div>
       <div class="kpi-value">${{ stats.netProfit | number:'1.0-0' }}</div>
-      <div class="kpi-label">Revenue neto (sin Ad Spend)</div>
+      <div class="kpi-label">Revenue neto</div>
     </div>
   </div>
 
@@ -59,23 +59,85 @@
   <div class="critical-banner" *ngIf="criticalProducts.length > 0">
     <div class="critical-title">🚨 {{ criticalProducts.length }} producto(s) requieren atención inmediata</div>
     <div class="critical-list">
-      <span class="critical-sku" *ngFor="let p of criticalProducts" (click)="activeTab='sku'; expandedSku=p.sku">
+      <span class="critical-sku" *ngFor="let p of criticalProducts"
+        (click)="activeTab='sku'; expandedSku=p.sku">
         {{ p.sku }} (Score: {{ p.score }})
       </span>
     </div>
+  </div>
+
+  <!-- ── GRÁFICAS ── -->
+  <div class="charts-section" *ngIf="stats && stats.totalProducts > 0">
+
+    <div class="charts-section-header">
+      <h2>📈 Análisis visual</h2>
+      <span class="charts-subtitle">Actualiza automáticamente con los filtros</span>
+    </div>
+
+    <div class="charts-row">
+      <div class="chart-card chart-wide">
+        <div class="chart-header">
+          <h3>🏆 Health Score por SKU</h3>
+          <span class="chart-badge">Barras horizontales</span>
+        </div>
+        <div class="chart-body-tall">
+          <app-chart type="bar" [data]="healthScoreChart" [options]="healthScoreOptions"></app-chart>
+        </div>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-header">
+          <h3>📦 Estado del inventario</h3>
+          <span class="chart-badge">Dona</span>
+        </div>
+        <div class="chart-body">
+          <app-chart type="doughnut" [data]="stockStatusChart" [options]="stockOptions"></app-chart>
+        </div>
+      </div>
+    </div>
+
+    <div class="charts-row">
+      <div class="chart-card">
+        <div class="chart-header">
+          <h3>💰 Revenue vs Ad Spend por categoría</h3>
+          <span class="chart-badge">Barras agrupadas</span>
+        </div>
+        <div class="chart-body">
+          <app-chart type="bar" [data]="revenueAdSpendChart" [options]="revenueAdSpendOptions"></app-chart>
+        </div>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-header">
+          <h3>📢 ACOS vs ROAS por categoría</h3>
+          <span class="chart-badge">Líneas duales</span>
+        </div>
+        <div class="chart-body">
+          <app-chart type="line" [data]="acosRoasChart" [options]="acosRoasOptions"></app-chart>
+        </div>
+      </div>
+    </div>
+
+    <div class="charts-row">
+      <div class="chart-card chart-full">
+        <div class="chart-header">
+          <h3>💵 Margen % por producto (Top 12)</h3>
+          <span class="chart-badge">Barras</span>
+        </div>
+        <div class="chart-body">
+          <app-chart type="bar" [data]="marginChart" [options]="marginChartOptions"></app-chart>
+        </div>
+      </div>
+    </div>
+
   </div>
 
   <!-- BÚSQUEDA Y FILTROS -->
   <div class="search-bar">
     <div class="search-input-wrap">
       <span class="search-icon">🔍</span>
-      <input
-        type="text"
-        [(ngModel)]="search"
-        (input)="onSearch()"
-        placeholder="Buscar por SKU, título o categoría..."
-        class="search-input"
-      />
+      <input type="text" [(ngModel)]="search" (input)="onSearch()"
+        placeholder="Buscar por SKU, título o categoría..." class="search-input" />
     </div>
     <select [(ngModel)]="selectedCategory" (change)="onFilter()" class="filter-select">
       <option value="">Todas las categorías</option>
@@ -109,10 +171,7 @@
     <div class="sku-list" *ngIf="!loading">
       <div class="sku-card" *ngFor="let p of filteredProducts" [class.expanded]="expandedSku === p.sku">
 
-        <!-- Fila principal -->
         <div class="sku-row" (click)="toggleExpand(p.sku)">
-
-          <!-- Score -->
           <div class="sku-score">
             <div class="score-circle" [style.border-color]="getScoreBar(p.score)">
               <span [class]="getScoreClass(p.score)">{{ p.score }}</span>
@@ -120,14 +179,12 @@
             <div class="score-label" [class]="getScoreClass(p.score)">{{ p.scoreLabel }}</div>
           </div>
 
-          <!-- Info básica -->
           <div class="sku-info">
             <div class="sku-id">{{ p.sku }}</div>
             <div class="sku-title">{{ p.title }}</div>
             <div class="sku-category">📁 {{ p.category }}</div>
           </div>
 
-          <!-- Métricas rápidas -->
           <div class="sku-metrics">
             <div class="metric-pill">
               <span class="pill-label">Ventas</span>
@@ -151,7 +208,6 @@
             </div>
           </div>
 
-          <!-- Alertas rápidas -->
           <div class="sku-alerts">
             <span *ngIf="p.stockStatus === 'out'" class="badge-danger">🔴 Sin stock</span>
             <span *ngIf="p.stockStatus === 'low'" class="badge-warning">⚠️ Stock bajo</span>
@@ -164,8 +220,6 @@
 
         <!-- Detalle expandido -->
         <div class="sku-detail" *ngIf="expandedSku === p.sku">
-
-          <!-- Métricas completas -->
           <div class="detail-grid">
             <div class="detail-section">
               <h4>📈 Ventas</h4>
@@ -186,7 +240,8 @@
               <div class="detail-row"><span>Stock FBA</span><strong [class]="getStockClass(p.stockStatus)">{{ p.fbaStock }}</strong></div>
               <div class="detail-row"><span>Reorder point</span><strong>{{ p.reorderPoint }}</strong></div>
               <div class="detail-row"><span>Lead time</span><strong>{{ p.leadTimeDays }}d</strong></div>
-              <div class="detail-row"><span>Estado</span>
+              <div class="detail-row">
+                <span>Estado</span>
                 <strong [class]="getStockClass(p.stockStatus)">
                   {{ p.stockStatus === 'ok' ? '✅ OK' : p.stockStatus === 'low' ? '⚠️ Bajo' : '🔴 Sin stock' }}
                 </strong>
@@ -204,7 +259,6 @@
             </div>
           </div>
 
-          <!-- Score bar -->
           <div class="score-bar-wrap">
             <div class="score-bar-label">Health Score: <strong [class]="getScoreClass(p.score)">{{ p.score }}/100 — {{ p.scoreLabel }}</strong></div>
             <div class="score-bar-track">
@@ -212,23 +266,16 @@
             </div>
           </div>
 
-          <!-- Alertas -->
           <div class="alerts-section" *ngIf="p.alerts.length > 0">
             <h4>🚨 Alertas</h4>
-            <div class="alert-item" *ngFor="let a of p.alerts" [class]="getAlertClass(a.type)">
-              {{ a.msg }}
-            </div>
+            <div class="alert-item" *ngFor="let a of p.alerts" [class]="getAlertClass(a.type)">{{ a.msg }}</div>
           </div>
 
-          <!-- Recomendaciones -->
           <div class="recs-section" *ngIf="p.recommendations.length > 0">
             <h4>💡 Recomendaciones</h4>
-            <div class="rec-item" *ngFor="let r of p.recommendations">
-              → {{ r }}
-            </div>
+            <div class="rec-item" *ngFor="let r of p.recommendations">→ {{ r }}</div>
           </div>
 
-          <!-- Link al editor -->
           <div class="detail-actions">
             <a routerLink="/editor" class="btn-edit-listing">✏️ Optimizar listing en el Editor</a>
           </div>
@@ -277,7 +324,6 @@
   <div *ngIf="activeTab === 'performance'">
     <div class="performance-grid">
 
-      <!-- Top 5 mejores -->
       <div class="perf-section">
         <h3>🏆 Top 5 — Mejor Health Score</h3>
         <div class="perf-list">
@@ -292,7 +338,6 @@
         </div>
       </div>
 
-      <!-- Top 5 críticos -->
       <div class="perf-section">
         <h3>🚨 Productos que necesitan atención</h3>
         <div class="perf-list">
@@ -300,7 +345,7 @@
             <span class="perf-rank red">!</span>
             <div class="perf-info">
               <div class="perf-sku">{{ p.sku }}</div>
-              <div class="perf-alerts-mini">
+              <div class="alerts-mini">
                 <span *ngFor="let a of p.alerts.slice(0,2)" class="mini-alert">{{ a.msg | slice:0:40 }}</span>
               </div>
             </div>
@@ -312,7 +357,6 @@
         </div>
       </div>
 
-      <!-- Tabla completa por rendimiento -->
       <div class="perf-table-section">
         <h3>📊 Todos los productos ordenados por rendimiento</h3>
         <div class="table-scroll">
@@ -358,7 +402,7 @@
   <div class="empty-state card" *ngIf="!loading && products.length === 0">
     <span class="empty-icon">🎯</span>
     <h2>No hay datos para el Overview</h2>
-    <p>Ve al <a routerLink="/warehouse">Warehouse</a> y sube datos de las 4 fuentes para ver el análisis completo.</p>
+    <p>Ve al <a routerLink="/warehouse">Warehouse</a> y sube datos de las 4 fuentes.</p>
   </div>
 
 </div>
